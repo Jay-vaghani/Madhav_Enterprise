@@ -27,7 +27,58 @@ import {
 } from "@mui/icons-material";
 import imageCompression from "browser-image-compression";
 import { useRegistration } from "../context/RegistrationContext";
-import { DEPARTMENTS, PICKUP_POINTS, SHIFTS, YEARS } from "../data/data";
+import { DEPARTMENTS, PICKUP_POINTS, SHIFTS, YEARS } from "../utils/data";
+import ImageCropModal from "../../../components/ImageCropModal";
+
+async function compressToWebpUnder50KB(base64Input, maxKB = 50) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX_DIM = 600;
+      let { width, height } = img;
+      if (width > MAX_DIM || height > MAX_DIM) {
+        if (width >= height) {
+          height = Math.round((height * MAX_DIM) / width);
+          width = MAX_DIM;
+        } else {
+          width = Math.round((width * MAX_DIM) / height);
+          height = MAX_DIM;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      let quality = 0.85;
+      const tryEncode = () => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Canvas toBlob failed"));
+              return;
+            }
+            if (blob.size <= maxKB * 1024 || quality <= 0.05) {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            } else {
+              quality = Math.max(0.05, quality - 0.1);
+              tryEncode();
+            }
+          },
+          "image/webp",
+          quality,
+        );
+      };
+      tryEncode();
+    };
+    img.onerror = reject;
+    img.src = base64Input;
+  });
+}
 
 // ── T&C content ────────────────────────────────────────────────
 const TERMS = [
@@ -270,7 +321,7 @@ function EditYear() {
     );
 
   const label = YEARS.find((y) => y.value === cur)?.label;
-  const sem = formData.semester ? `Semester ${formData.semester}` : null;
+  const sem = formData.semester || null;
   const display = label ? `${label}${sem ? ` / ${sem}` : ""}` : null;
 
   return (
@@ -398,53 +449,69 @@ function SectionHeader({ label }) {
 // ═══════════════════════════════════════════════════════════════
 export default function FinalReviewStep() {
   const { formData, updateFormData } = useRegistration();
-  const [photo, setPhoto] = useState(null);
+  const [photo, setPhoto] = useState(() => {
+    if (formData.photoBase64) {
+      return {
+        url: formData.photoBase64,
+        name: "uploaded_photo.webp",
+        finalSize: (formData.photoBase64.length * 0.75 / 1024 / 1024).toFixed(2),
+        wasCompressed: true,
+      };
+    }
+    return null;
+  });
   const [compressing, setCompressing] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(
     formData.termsAccepted ?? false,
   );
   const fileInputRef = useRef(null);
 
-  // ── Smart photo compression → base64 ────────────────────────
-  const handleFileSelect = useCallback(
-    async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      e.target.value = null;
+  // ── Image crop state ────────────────────────────────────────
+  const [cropSrc, setCropSrc] = useState(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [rawFile, setRawFile] = useState(null);
+
+  // ── Step 1: Select file → open crop modal ──────────────────
+  const handleFileSelect = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = null;
+    setRawFile(file);
+    const url = URL.createObjectURL(file);
+    setCropSrc(url);
+    setCropOpen(true);
+  }, []);
+
+  // ── Step 2: After crop → compress if needed → save ─────────
+  const handleCropComplete = useCallback(
+    async (croppedBase64) => {
+      setCropOpen(false);
+      setCropSrc(null);
       setCompressing(true);
-      const MAX = 5 * 1024 * 1024;
-      let processed = file;
-      const wasOversized = file.size > MAX;
-      if (wasOversized) {
-        try {
-          processed = await imageCompression(file, {
-            maxSizeMB: 4.9,
-            maxWidthOrHeight: 2000,
-            useWebWorker: true,
-            fileType: "image/jpeg",
-            initialQuality: 0.92,
-          });
-        } catch (err) {
-          console.error("Compression failed:", err);
-        }
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result;
+
+      try {
+        const finalBase64 = await compressToWebpUnder50KB(croppedBase64, 50);
+        
+        // Calculate approx size
+        const finalSizeMB = (finalBase64.length * 0.75 / 1024 / 1024).toFixed(3);
+
         setPhoto({
-          url: URL.createObjectURL(processed),
-          name: file.name,
-          originalSize: (file.size / 1048576).toFixed(1),
-          finalSize: (processed.size / 1048576).toFixed(1),
-          wasCompressed: wasOversized,
-          base64,
+          url: finalBase64,
+          name: rawFile?.name || "photo.webp",
+          originalSize: (rawFile?.size ? (rawFile.size / 1048576).toFixed(1) : "0.0"),
+          finalSize: finalSizeMB,
+          wasCompressed: true,
+          base64: finalBase64,
         });
+        
+        updateFormData({ photoBase64: finalBase64 });
+      } catch (err) {
+        console.error("Compression failed:", err);
+      } finally {
         setCompressing(false);
-        updateFormData({ photoBase64: base64 });
-      };
-      reader.readAsDataURL(processed);
+      }
     },
-    [updateFormData],
+    [rawFile, updateFormData],
   );
 
   const handleTermsToggle = (e) => {
@@ -639,12 +706,14 @@ export default function FinalReviewStep() {
                       />
                     )}
                     <Box
+                      onClick={() => !compressing && fileInputRef.current?.click()}
                       sx={{
                         display: "flex",
                         alignItems: "center",
                         gap: 0.5,
                         width: "fit-content",
                         mt: 0.5,
+                        cursor: compressing ? "wait" : "pointer",
                       }}
                     >
                       <CenterFocusWeak
@@ -710,6 +779,7 @@ export default function FinalReviewStep() {
 
           {/* Terms & Conditions */}
           <Accordion
+            defaultExpanded={true}
             elevation={0}
             sx={{
               border: "1px solid #E2E8F0",
@@ -1006,6 +1076,17 @@ export default function FinalReviewStep() {
           </Box>
         </Grid>
       </Grid>
+
+      {/* Image Crop Modal */}
+      <ImageCropModal
+        open={cropOpen}
+        imageSrc={cropSrc}
+        onClose={() => {
+          setCropOpen(false);
+          setCropSrc(null);
+        }}
+        onComplete={handleCropComplete}
+      />
     </Box>
   );
 }

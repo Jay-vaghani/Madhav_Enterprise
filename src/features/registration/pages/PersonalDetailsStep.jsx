@@ -48,6 +48,17 @@ export default function PersonalDetailsStep() {
   };
   const areaSx = { "& .MuiOutlinedInput-root": { borderRadius: "10px" } };
 
+  const handleMobileChange = (e, onChange) => {
+    let val = e.target.value.replace(/\D/g, "");
+    if (val.startsWith("91") && val.length > 10) {
+      val = val.substring(2);
+    } else if (val.startsWith("0") && val.length > 10) {
+      val = val.substring(1);
+    }
+    if (val.length > 10) val = val.substring(0, 10);
+    onChange(val);
+  };
+
   return (
     <Box>
       {/* Headline */}
@@ -116,6 +127,12 @@ export default function PersonalDetailsStep() {
                     helperText={fieldState.error?.message}
                     fullWidth
                     sx={fieldSx}
+                    slotProps={{
+                      htmlInput: {
+                        autoComplete: "name",
+                        inputMode: "text",
+                      },
+                    }}
                   />
                 )}
               />
@@ -142,6 +159,12 @@ export default function PersonalDetailsStep() {
                     helperText={fieldState.error?.message}
                     fullWidth
                     sx={fieldSx}
+                    slotProps={{
+                      htmlInput: {
+                        autoComplete: "email",
+                        inputMode: "email",
+                      },
+                    }}
                   />
                 )}
               />
@@ -154,12 +177,22 @@ export default function PersonalDetailsStep() {
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
+                    type="tel"
                     label="Student Mobile Number"
                     placeholder="+91 00000 00000"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                     fullWidth
                     sx={fieldSx}
+                    onChange={(e) => handleMobileChange(e, field.onChange)}
+                    slotProps={{
+                      htmlInput: {
+                        autoComplete: "tel",
+                        inputMode: "numeric",
+                        pattern: "[0-9]*",
+                        maxLength: 14,
+                      },
+                    }}
                   />
                 )}
               />
@@ -174,12 +207,22 @@ export default function PersonalDetailsStep() {
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
+                    type="tel"
                     label="Parent / Guardian Mobile"
                     placeholder="+91 00000 00000"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                     fullWidth
                     sx={fieldSx}
+                    onChange={(e) => handleMobileChange(e, field.onChange)}
+                    slotProps={{
+                      htmlInput: {
+                        autoComplete: "tel",
+                        inputMode: "numeric",
+                        pattern: "[0-9]*",
+                        maxLength: 14,
+                      },
+                    }}
                   />
                 )}
               />
@@ -204,7 +247,18 @@ export default function PersonalDetailsStep() {
                     helperText={fieldState.error?.message}
                     fullWidth
                     sx={fieldSx}
-                    inputProps={{ maxLength: 6 }}
+                    slotProps={{
+                      htmlInput: {
+                        maxLength: 6,
+                        autoComplete: "postal-code",
+                        inputMode: "numeric",
+                        pattern: "[0-9]*",
+                      },
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      field.onChange(val.substring(0, 6));
+                    }}
                   />
                 )}
               />
@@ -227,6 +281,11 @@ export default function PersonalDetailsStep() {
                     helperText={fieldState.error?.message}
                     fullWidth
                     sx={areaSx}
+                    slotProps={{
+                      htmlInput: {
+                        autoComplete: "street-address",
+                      },
+                    }}
                   />
                 )}
               />

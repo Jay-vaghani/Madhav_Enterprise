@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { School, Search } from "@mui/icons-material";
-import { DEPARTMENTS, SHIFTS, YEARS } from "../data/data";
+import { DEPARTMENTS, SHIFTS, YEARS } from "../utils/data";
 import { useRegistration } from "../context/RegistrationContext";
 
 // ── Uppercase field label style ───────────────────────────────
@@ -34,10 +34,10 @@ export default function IdentityVerificationStep() {
   const { control, handleSubmit, setValue, watch } = useForm({
     defaultValues: {
       enrollmentNumber: formData.enrollmentNumber,
-      year:             formData.year,
-      semester:         formData.semester,
-      department:       formData.department,
-      shift:            formData.shift,
+      year: formData.year,
+      semester: formData.semester,
+      department: formData.department,
+      shift: formData.shift,
     },
   });
 
@@ -127,11 +127,17 @@ export default function IdentityVerificationStep() {
                   render={({ field, fieldState }) => (
                     <TextField
                       {...field}
-                      placeholder="ME-2024-0000"
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
                       fullWidth
+                      onChange={(e) =>
+                        field.onChange(e.target.value.toUpperCase())
+                      }
                       slotProps={{
+                        htmlInput: {
+                          autoCapitalize: "characters",
+                          autoComplete: "off",
+                        },
                         input: {
                           sx: { height: 52, borderRadius: "10px" },
                           endAdornment: (
@@ -167,7 +173,7 @@ export default function IdentityVerificationStep() {
                                     letterSpacing: "0.08em",
                                   }}
                                 >
-                                  University Crest
+                                  Enrollment Number
                                 </p>
                               </Box>
                             </InputAdornment>

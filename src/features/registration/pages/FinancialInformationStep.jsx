@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { Place, InfoOutlined } from "@mui/icons-material";
-import { PICKUP_POINTS } from "../data/data";
+import { PICKUP_POINTS } from "../utils/data";
 import { useRegistration } from "../context/RegistrationContext";
 
 export default function FinancialInformationStep() {
@@ -152,7 +152,7 @@ export default function FinancialInformationStep() {
                 >
                   {selectedPickup.label}
                 </p>
-                <p
+                {/* <p
                   style={{
                     margin: "3px 0 0 0",
                     fontSize: "0.82rem",
@@ -160,7 +160,7 @@ export default function FinancialInformationStep() {
                   }}
                 >
                   {selectedPickup.time} Departure
-                </p>
+                </p> */}
               </Box>
 
               {/* Right: fee badge */}

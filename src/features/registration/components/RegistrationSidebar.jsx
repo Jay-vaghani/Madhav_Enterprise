@@ -67,7 +67,7 @@ export default function RegistrationSidebar({ activeStep, onChange }) {
         orientation="vertical"
         onChange={onChange}
         aria-label="Registration steps"
-        TabIndicatorProps={{
+        tabindicatorprops={{
           style: {
             left: 0,
             width: 3,
@@ -98,8 +98,8 @@ export default function RegistrationSidebar({ activeStep, onChange }) {
                     color: isActive
                       ? "primary.main"
                       : isDone
-                      ? "success.main"
-                      : "text.disabled",
+                        ? "success.main"
+                        : "text.disabled",
                   }}
                 />
               }

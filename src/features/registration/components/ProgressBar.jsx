@@ -5,7 +5,7 @@ import { useRegistration } from "../context/RegistrationContext";
 
 const TOTAL_STEPS = 4;
 
-export default function ProgressBar({ currentStep = 1, onNext, onSubmit }) {
+export default function ProgressBar({ currentStep = 1, onNext, onSubmit, isSubmitting = false }) {
   const { formData } = useRegistration();
 
   const progress = Math.round((currentStep / TOTAL_STEPS) * 100);
@@ -65,8 +65,9 @@ export default function ProgressBar({ currentStep = 1, onNext, onSubmit }) {
         {/* Next / Submit button */}
         <Button
           variant="contained"
+          disabled={isSubmitting}
           endIcon={
-            isFinal ? <CheckCircleOutlineOutlined /> : <ArrowForward />
+            isFinal ? (isSubmitting ? null : <CheckCircleOutlineOutlined />) : <ArrowForward />
           }
           disableElevation
           onClick={isFinal ? onSubmit : onNext}
@@ -89,7 +90,7 @@ export default function ProgressBar({ currentStep = 1, onNext, onSubmit }) {
             transition: "all 0.2s",
           }}
         >
-          {isFinal ? "Submit" : "Next Step"}
+          {isFinal ? (isSubmitting ? "Submitting..." : "Submit") : "Next Step"}
         </Button>
       </Box>
     </>

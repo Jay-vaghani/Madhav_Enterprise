@@ -6,7 +6,7 @@ import {
   AccountBalanceWallet,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import AppHeader from "../components/AppHeader";
+import AppHeader from "../../../components/AppHeader";
 
 export default function SuccessPage() {
   const theme = useTheme();

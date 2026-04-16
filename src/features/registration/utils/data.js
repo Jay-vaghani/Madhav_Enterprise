@@ -68,37 +68,33 @@ export const YEARS = [
   {
     value: "1",
     label: "First Year",
-    autoSemester: "1",
+    autoSemester: "Semester 1-2",
     semesters: [
-      { value: "1", label: "Semester 1" },
-      { value: "2", label: "Semester 2" },
+      { value: "Semester 1-2", label: "Semester 1 - 2" },
     ],
   },
   {
     value: "2",
     label: "Second Year",
-    autoSemester: "3",
+    autoSemester: "Semester 3-4",
     semesters: [
-      { value: "3", label: "Semester 3" },
-      { value: "4", label: "Semester 4" },
+      { value: "Semester 3-4", label: "Semester 3 - 4" },
     ],
   },
   {
     value: "3",
     label: "Third Year",
-    autoSemester: "5",
+    autoSemester: "Semester 5-6",
     semesters: [
-      { value: "5", label: "Semester 5" },
-      { value: "6", label: "Semester 6" },
+      { value: "Semester 5-6", label: "Semester 5 - 6" },
     ],
   },
   {
     value: "4",
     label: "Fourth Year",
-    autoSemester: "7",
+    autoSemester: "Semester 7-8",
     semesters: [
-      { value: "7", label: "Semester 7" },
-      { value: "8", label: "Semester 8" },
+      { value: "Semester 7-8", label: "Semester 7 - 8" },
     ],
   },
 ];
