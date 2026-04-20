@@ -353,7 +353,6 @@ export default function VerificationModal({
       // Remove old field if it leaked
       delete payload.transactionId;
       const res = await approveStudent(token, student._id, payload);
-      // Pass receipt data to parent before closing
       if (res.receiptData) {
         onReceiptReady?.(res.receiptData);
       }
@@ -1213,7 +1212,10 @@ export default function VerificationModal({
                               fullWidth
                               type="tel"
                               placeholder="Second transaction ID (optional)"
-                              inputProps={{ inputMode: "numeric", maxLength: 12 }}
+                              inputProps={{
+                                inputMode: "numeric",
+                                maxLength: 12,
+                              }}
                               error={!!errors.transaction2}
                               helperText={errors.transaction2?.message}
                               sx={fieldSx}

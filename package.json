@@ -22,7 +22,9 @@
     "react-easy-crop": "^5.5.7",
     "react-hook-form": "^7.72.1",
     "react-router": "^7.14.0",
-    "react-router-dom": "^7.14.0"
+    "react-router-dom": "^7.14.0",
+    "recharts": "^3.8.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",

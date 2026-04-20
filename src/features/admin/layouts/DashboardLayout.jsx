@@ -5,6 +5,9 @@ import { theme } from "../../../theme/theme";
 import AdminSidebar from "../components/AdminSidebar";
 import AdminTopBar from "../components/AdminTopBar";
 import PendingStudentsPage from "../pages/PendingStudentsPage";
+import ReportsPage from "../pages/ReportsPage";
+import ApprovedStudentsPage from "../pages/ApprovedStudentsPage";
+import CancellationPage from "../pages/CancellationPage";
 
 export default function DashboardLayout() {
   const [activePage, setActivePage] = useState("pending");
@@ -14,27 +17,11 @@ export default function DashboardLayout() {
       case "pending":
         return <PendingStudentsPage />;
       case "approved":
-        // Placeholder — build later
-        return (
-          <Box sx={{ p: 4 }}>
-            <h2 style={{ color: "#0F172A", fontWeight: 700 }}>
-              Approved Students
-            </h2>
-            <p style={{ color: "#64748B" }}>
-              This page will be built in a future update.
-            </p>
-          </Box>
-        );
+        return <ApprovedStudentsPage />;
       case "reports":
-        // Placeholder — build later
-        return (
-          <Box sx={{ p: 4 }}>
-            <h2 style={{ color: "#0F172A", fontWeight: 700 }}>Reports</h2>
-            <p style={{ color: "#64748B" }}>
-              This page will be built in a future update.
-            </p>
-          </Box>
-        );
+        return <ReportsPage />;
+      case "cancellation":
+        return <CancellationPage />;
       default:
         return <PendingStudentsPage />;
     }

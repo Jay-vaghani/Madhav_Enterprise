@@ -9,6 +9,7 @@ import {
   AddRoadOutlined,
   LogoutOutlined,
   DirectionsBus,
+  MoneyOffOutlined,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -25,14 +26,18 @@ const NAV_ITEMS = [
     label: "Approved Students",
     icon: PeopleAltOutlined,
     active: false,
-    disabled: true,
   },
   {
     id: "reports",
     label: "Reports",
     icon: BarChartOutlined,
     active: false,
-    disabled: true,
+  },
+  {
+    id: "cancellation",
+    label: "Cancellation & Refund",
+    icon: MoneyOffOutlined,
+    active: false,
   },
 ];
 

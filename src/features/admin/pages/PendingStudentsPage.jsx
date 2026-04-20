@@ -78,7 +78,7 @@ export default function PendingStudentsPage() {
     total: 0,
   });
 
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   // Sync sound setting to a ref so callbacks don't recreate constantly
@@ -108,30 +108,33 @@ export default function PendingStudentsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const loadStudents = useCallback(async (background = false) => {
-    if (!token) return;
-    if (!background) setIsLoading(true);
-    setError("");
-    try {
-      const res = await fetchPendingStudents(token);
-      
-      setStudents(prev => {
-        if (background && soundEnabledRef.current) {
-          const oldIds = new Set(prev.map(s => s._id));
-          const hasNew = res.data.some(s => !oldIds.has(s._id));
-          if (hasNew) {
-            playDingDong();
+  const loadStudents = useCallback(
+    async (background = false) => {
+      if (!token) return;
+      if (!background) setIsLoading(true);
+      setError("");
+      try {
+        const res = await fetchPendingStudents(token);
+
+        setStudents((prev) => {
+          if (background && soundEnabledRef.current) {
+            const oldIds = new Set(prev.map((s) => s._id));
+            const hasNew = res.data.some((s) => !oldIds.has(s._id));
+            if (hasNew) {
+              playDingDong();
+            }
           }
-        }
-        return res.data || [];
-      });
-      setTotalCount(res.totalCount || 0);
-    } catch (err) {
-      if (!background) setError(err.message);
-    } finally {
-      if (!background) setIsLoading(false);
-    }
-  }, [token]);
+          return res.data || [];
+        });
+        setTotalCount(res.totalCount || 0);
+      } catch (err) {
+        if (!background) setError(err.message);
+      } finally {
+        if (!background) setIsLoading(false);
+      }
+    },
+    [token],
+  );
 
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
@@ -141,13 +144,17 @@ export default function PendingStudentsPage() {
       if (debouncedSearch) {
         const query = debouncedSearch.toLowerCase();
         const nameMatch = student.fullName?.toLowerCase().includes(query);
-        const enrolmentMatch = student.enrollmentNumber?.toLowerCase().includes(query);
+        const enrolmentMatch = student.enrollmentNumber
+          ?.toLowerCase()
+          .includes(query);
         if (!nameMatch && !enrolmentMatch) matches = false;
       }
 
-      if (department && student.department?.label !== department) matches = false;
+      if (department && student.department?.label !== department)
+        matches = false;
       if (year && student.year !== String(year)) matches = false;
-      if (pickupPoint && student.pickupPoint?.label !== pickupPoint) matches = false;
+      if (pickupPoint && student.pickupPoint?.label !== pickupPoint)
+        matches = false;
       return matches;
     });
   }, [students, debouncedSearch, department, year, pickupPoint]);
@@ -228,13 +235,22 @@ export default function PendingStudentsPage() {
 
   const resolvedPercent =
     stats.total > 0
-      ? Math.round(((stats.approved + stats.rejected) / stats.total) * 100)
+      ? Math.round(((stats.approved || 0) / stats.total) * 100)
       : 0;
 
   return (
     <Box>
       {/* Page Header */}
-      <Box sx={{ mb: 4, display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: 3 }}>
+      <Box
+        sx={{
+          mb: 4,
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 3,
+        }}
+      >
         <Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
             <h1
@@ -276,13 +292,25 @@ export default function PendingStudentsPage() {
               />
             }
             label={
-              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#64748B" }}>
+              <span
+                style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  color: "#64748B",
+                }}
+              >
                 Auto-Refresh (5s)
               </span>
             }
           />
 
-          <Tooltip title={soundEnabled ? "Disable Notification Sound" : "Enable Notification Sound"}>
+          <Tooltip
+            title={
+              soundEnabled
+                ? "Disable Notification Sound"
+                : "Enable Notification Sound"
+            }
+          >
             <IconButton
               onClick={() => setSoundEnabled(!soundEnabled)}
               sx={{
@@ -291,7 +319,11 @@ export default function PendingStudentsPage() {
                 "&:hover": { bgcolor: soundEnabled ? "#BAE6FD" : "#E2E8F0" },
               }}
             >
-              {soundEnabled ? <NotificationsActiveOutlined /> : <NotificationsOffOutlined />}
+              {soundEnabled ? (
+                <NotificationsActiveOutlined />
+              ) : (
+                <NotificationsOffOutlined />
+              )}
             </IconButton>
           </Tooltip>
 
@@ -308,7 +340,11 @@ export default function PendingStudentsPage() {
                 "&:hover": { bgcolor: "#DBEAFE" },
               }}
             >
-              <SyncOutlined sx={{ animation: isLoading ? "spin 1s linear infinite" : "none" }} />
+              <SyncOutlined
+                sx={{
+                  animation: isLoading ? "spin 1s linear infinite" : "none",
+                }}
+              />
               <style>
                 {`
                   @keyframes spin {
@@ -376,7 +412,7 @@ export default function PendingStudentsPage() {
               onChange={(e) => setDepartment(e.target.value)}
               size="small"
               fullWidth
-              displayEmpty
+              displayempty="true"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "10px",
@@ -401,7 +437,7 @@ export default function PendingStudentsPage() {
               onChange={(e) => setYear(e.target.value)}
               size="small"
               fullWidth
-              displayEmpty
+              displayempty="true"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "10px",
@@ -426,7 +462,7 @@ export default function PendingStudentsPage() {
               onChange={(e) => setPickupPoint(e.target.value)}
               size="small"
               fullWidth
-              displayEmpty
+              displayempty="true"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "10px",
@@ -497,7 +533,11 @@ export default function PendingStudentsPage() {
             </p>
           </Box>
           <Box
-            sx={{ flex: 0.6, display: { xs: "none", sm: "block" }, minWidth: 0 }}
+            sx={{
+              flex: 0.6,
+              display: { xs: "none", sm: "block" },
+              minWidth: 0,
+            }}
           >
             <p
               style={{
@@ -553,7 +593,11 @@ export default function PendingStudentsPage() {
             </p>
           </Box>
           <Box
-            sx={{ flex: 0.6, display: { xs: "none", lg: "block" }, minWidth: 0 }}
+            sx={{
+              flex: 0.6,
+              display: { xs: "none", lg: "block" },
+              minWidth: 0,
+            }}
           >
             <p
               style={{
@@ -645,7 +689,9 @@ export default function PendingStudentsPage() {
                 px: 3,
                 py: 2,
                 borderBottom:
-                  index < filteredStudents.length - 1 ? "1px solid #F1F5F9" : "none",
+                  index < filteredStudents.length - 1
+                    ? "1px solid #F1F5F9"
+                    : "none",
                 transition: "background 0.15s ease",
                 "&:hover": { bgcolor: "#FAFBFC" },
               }}
@@ -761,7 +807,12 @@ export default function PendingStudentsPage() {
                 }}
               >
                 <LocationOnOutlined
-                  sx={{ fontSize: 16, color: "#2563EB", flexShrink: 0, mt: 0.2 }}
+                  sx={{
+                    fontSize: 16,
+                    color: "#2563EB",
+                    flexShrink: 0,
+                    mt: 0.2,
+                  }}
                 />
                 <p
                   style={{
@@ -886,7 +937,7 @@ export default function PendingStudentsPage() {
             </Box>
             <p style={{ margin: 0, fontSize: "0.82rem", color: "#94A3B8" }}>
               {stats.total > 0
-                ? `${stats.approved + stats.rejected} of ${stats.total} total registrations have been processed.`
+                ? `${(stats.approved || 0) + (stats.rejected || 0)} of ${stats.total} total registrations have been processed.`
                 : "No registrations yet."}
             </p>
           </Grid>
