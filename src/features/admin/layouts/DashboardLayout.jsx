@@ -25,7 +25,7 @@ import ApprovedStudentsPage from "../pages/ApprovedStudentsPage";
 import RejectedStudentsPage from "../pages/RejectedStudentsPage";
 import CancellationPage from "../pages/CancellationPage";
 import TemporaryPassesPage from "../pages/TemporaryPassesPage";
-import StaffManagementPage from "../pages/StaffManagementPage";
+
 import SettingsPage from "../pages/SettingsPage";
 
 const NAV_ITEMS = [
@@ -54,8 +54,6 @@ export default function DashboardLayout() {
         return <CancellationPage />;
       case "temporary_passes":
         return <TemporaryPassesPage />;
-      case "staff_management":
-        return <StaffManagementPage />;
       case "settings":
         return <SettingsPage />;
       default:

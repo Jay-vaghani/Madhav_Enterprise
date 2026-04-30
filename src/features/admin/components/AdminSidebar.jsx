@@ -54,13 +54,7 @@ const NAV_ITEMS = [
     icon: MoneyOffOutlined,
     active: false,
   },
-  {
-    id: "staff_management",
-    label: "Staff Management",
-    icon: ManageAccountsOutlined,
-    active: false,
-    adminOnly: true,
-  },
+
   {
     id: "settings",
     label: "Settings",
