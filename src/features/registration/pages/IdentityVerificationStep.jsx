@@ -12,11 +12,12 @@ import {
   Select,
   TextField,
   useMediaQuery,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
-import { School, Search } from "@mui/icons-material";
-import { DEPARTMENTS, SHIFTS, YEARS } from "../utils/data";
-import { useRegistration } from "../context/RegistrationContext";
+import { School } from "@mui/icons-material";
+import { useRegistration, YEARS } from "../context/RegistrationContext";
 
 // ── Uppercase field label style ───────────────────────────────
 const fieldLabel = {
@@ -29,7 +30,7 @@ const fieldLabel = {
 };
 
 export default function IdentityVerificationStep() {
-  const { formData, updateFormData } = useRegistration();
+  const { formData, updateFormData, departments, shifts, settingsLoading, settingsError } = useRegistration();
 
   const { control, handleSubmit, setValue, watch } = useForm({
     defaultValues: {
@@ -280,7 +281,7 @@ export default function IdentityVerificationStep() {
                   rules={{ required: "Department is required" }}
                   render={({ field, fieldState }) => (
                     <Autocomplete
-                      options={DEPARTMENTS}
+                      options={departments}
                       value={field.value}
                       getOptionLabel={(option) => option?.label ?? ""}
                       isOptionEqualToValue={(option, val) =>
@@ -312,9 +313,25 @@ export default function IdentityVerificationStep() {
                 />
               </Grid>
 
-              {/* ── ACADEMIC SHIFT (3 selectable cards) ─────────── */}
+                     {/* ── ACADEMIC SHIFT (3 selectable cards) ─────────── */}
               <Grid size={{ xs: 12 }}>
                 <p style={fieldLabel}>Academic Shift</p>
+                
+                {settingsLoading && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, py: 2 }}>
+                    <CircularProgress size={16} />
+                    <span style={{ fontSize: "0.85rem", color: "#64748B" }}>
+                      Loading shifts...
+                    </span>
+                  </Box>
+                )}
+
+                {settingsError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {settingsError}
+                  </Alert>
+                )}
+
                 <Controller
                   name="shift"
                   control={control}
@@ -322,7 +339,7 @@ export default function IdentityVerificationStep() {
                   render={({ field, fieldState }) => (
                     <>
                       <Grid container spacing={2}>
-                        {SHIFTS.map((shift) => {
+                        {shifts.map((shift) => {
                           const isSelected = field.value === shift.id;
                           return (
                             <Grid key={shift.id} size={{ xs: 12, lg: 4 }}>

@@ -7,14 +7,14 @@ import {
   CardContent,
   TextField,
   Typography,
+  CircularProgress,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { Place, InfoOutlined } from "@mui/icons-material";
-import { PICKUP_POINTS } from "../utils/data";
 import { useRegistration } from "../context/RegistrationContext";
 
 export default function FinancialInformationStep() {
-  const { formData, updateFormData } = useRegistration();
+  const { formData, updateFormData, pickupPoints, settingsLoading, settingsError } = useRegistration();
 
   const { control, watch } = useForm({
     defaultValues: {
@@ -90,7 +90,7 @@ export default function FinancialInformationStep() {
               rules={{ required: "Pickup point is required" }}
               render={({ field, fieldState }) => (
                 <Autocomplete
-                  options={PICKUP_POINTS}
+                  options={pickupPoints}
                   value={field.value}
                   getOptionLabel={(option) => option?.label ?? ""}
                   isOptionEqualToValue={(option, val) => option?.id === val?.id}
@@ -120,6 +120,32 @@ export default function FinancialInformationStep() {
           </Box>
 
           {/* ── SELECTED PICKUP CARD — shown after selection ── */}
+          {settingsLoading && (
+            <Box sx={{ mt: 2, display: "flex", alignItems: "center", gap: 1 }}>
+              <CircularProgress size={16} />
+              <Typography variant="body2" color="text.secondary">
+                Loading pickup points...
+              </Typography>
+            </Box>
+          )}
+
+          {settingsError && (
+            <Box
+              sx={{
+                mt: 2,
+                bgcolor: "#FEF2F2",
+                border: "1px solid #FECACA",
+                borderRadius: "12px",
+                px: 2,
+                py: 1.5,
+              }}
+            >
+              <Typography variant="body2" color="error">
+                {settingsError}
+              </Typography>
+            </Box>
+          )}
+
           {selectedPickup && (
             <Box
               sx={{
@@ -152,15 +178,6 @@ export default function FinancialInformationStep() {
                 >
                   {selectedPickup.label}
                 </p>
-                {/* <p
-                  style={{
-                    margin: "3px 0 0 0",
-                    fontSize: "0.82rem",
-                    color: "#64748B",
-                  }}
-                >
-                  {selectedPickup.time} Departure
-                </p> */}
               </Box>
 
               {/* Right: fee badge */}

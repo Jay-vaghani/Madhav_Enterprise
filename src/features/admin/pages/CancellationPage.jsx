@@ -94,20 +94,22 @@ const computeRefund = (fee, usageMonths) => {
   return Math.max(0, Math.round(refund));
 };
 
-const getRefundSplit = (refundAmount, payment) => {
+const getRefundSplit = (refundAmount, payment, refundMode = "proportional") => {
   if (!payment) return { cash: 0, bank: 0 };
-  const totalOrig = payment.amount || 1;
   const method = payment.paymentMethod;
-  const settlement = payment.settlementAccount;
 
   if (method === "cash") return { cash: refundAmount, bank: 0 };
   if (method === "bank") return { cash: 0, bank: refundAmount };
 
-  // 'both' -> Percent-based split
+  // 'both' — honour the chosen refundMode
+  if (refundMode === "all-bank") return { cash: 0, bank: refundAmount };
+  if (refundMode === "all-cash") return { cash: refundAmount, bank: 0 };
+
+  // Default: proportional split
+  const totalOrig = payment.amount || 1;
   const cashRatio = (payment.cashAmount || 0) / totalOrig;
   const cashRefund = Math.round(refundAmount * cashRatio);
-  const bankRefund = refundAmount - cashRefund;
-  return { cash: cashRefund, bank: bankRefund };
+  return { cash: cashRefund, bank: refundAmount - cashRefund };
 };
 
 const acctStyle = (a) =>
@@ -163,6 +165,17 @@ export default function CancellationPage() {
     severity: "success",
   });
 
+  // --- Confirmation Dialog State ---
+  const [confirmState, setConfirmState] = useState({
+    open: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    loading: false,
+  });
+
+  const closeConfirm = () => setConfirmState((p) => ({ ...p, open: false }));
+
   const loadStats = useCallback(async () => {
     if (!token) return;
     try {
@@ -214,6 +227,7 @@ export default function CancellationPage() {
           usageMonths: usage,
           calculatedRefund: calc,
           finalSettlement: calc,
+          refundMode: "proportional",
           remarks: "",
           processing: false,
         };
@@ -250,63 +264,75 @@ export default function CancellationPage() {
     const row = rowState[rn];
     if (!row) return;
 
-    const split = getRefundSplit(Number(row.finalSettlement), student.payment);
+    const split = getRefundSplit(
+      Number(row.finalSettlement),
+      student.payment,
+      row.refundMode,
+    );
     const splitMsg =
       student.payment?.paymentMethod === "both"
-        ? `\nSplit: Cash ${fmtCurrency(split.cash)} | Bank ${fmtCurrency(split.bank)}`
+        ? `Split: Cash ${fmtCurrency(split.cash)} | Bank ${fmtCurrency(split.bank)}`
         : "";
 
-    if (
-      !window.confirm(
-        `Process cancellation for ${student.fullName}?\n\nRefund: ₹${Number(row.finalSettlement).toLocaleString("en-IN")}${splitMsg}\nThis can be undone later.`,
-      )
-    )
-      return;
-
-    handleField(rn, "processing", true);
-    try {
-      await processCancellation(token, {
-        receiptNumber: rn,
-        usageStartDate: row.usageDate,
-        usageMonths: row.usageMonths,
-        calculatedRefund: row.calculatedRefund,
-        finalSettlement: Number(row.finalSettlement),
-        adminCharge: ADMIN_CHARGE,
-        remarks: row.remarks,
-      });
-      setResults((p) => p.filter((s) => s.receiptNumber !== rn));
-      setSnack({
-        open: true,
-        message: `Refund processed for ${student.fullName}`,
-        severity: "success",
-      });
-      loadStats();
-      if (historyOpen) loadHistory();
-    } catch (err) {
-      setSnack({ open: true, message: err.message, severity: "error" });
-      handleField(rn, "processing", false);
-    }
+    setConfirmState({
+      open: true,
+      title: "Process Cancellation",
+      message: `Are you sure you want to process the cancellation for ${student.fullName}? This will refund ${fmtCurrency(row.finalSettlement)} ${splitMsg ? `(${splitMsg})` : ""}.`,
+      onConfirm: async () => {
+        setConfirmState((p) => ({ ...p, loading: true }));
+        try {
+          await processCancellation(token, {
+            receiptNumber: rn,
+            usageStartDate: row.usageDate,
+            usageMonths: row.usageMonths,
+            calculatedRefund: row.calculatedRefund,
+            finalSettlement: Number(row.finalSettlement),
+            adminCharge: ADMIN_CHARGE,
+            refundMode: row.refundMode || "proportional",
+            remarks: row.remarks,
+          });
+          setResults((p) => p.filter((s) => s.receiptNumber !== rn));
+          setSnack({
+            open: true,
+            message: `Refund processed for ${student.fullName}`,
+            severity: "success",
+          });
+          loadStats();
+          if (historyOpen) loadHistory();
+          closeConfirm();
+        } catch (err) {
+          setSnack({ open: true, message: err.message, severity: "error" });
+          setConfirmState((p) => ({ ...p, loading: false }));
+        }
+      },
+      loading: false,
+    });
   };
 
   const handleUndo = async (item) => {
-    if (
-      !window.confirm(
-        `Undo cancellation for ${item.fullName}?\n\nThis will restore the student (with a new ID) and the photo.`,
-      )
-    )
-      return;
-    try {
-      await undoCancellation(token, item._id);
-      setSnack({
-        open: true,
-        message: `Cancellation undone for ${item.fullName}`,
-        severity: "success",
-      });
-      loadStats();
-      loadHistory();
-    } catch (err) {
-      setSnack({ open: true, message: err.message, severity: "error" });
-    }
+    setConfirmState({
+      open: true,
+      title: "Undo Cancellation",
+      message: `Are you sure you want to undo the cancellation for ${item.fullName}? This will restore the student (with a new ID) and move their photo back.`,
+      onConfirm: async () => {
+        setConfirmState((p) => ({ ...p, loading: true }));
+        try {
+          await undoCancellation(token, item._id);
+          setSnack({
+            open: true,
+            message: `Cancellation undone for ${item.fullName}`,
+            severity: "success",
+          });
+          loadStats();
+          loadHistory();
+          closeConfirm();
+        } catch (err) {
+          setSnack({ open: true, message: err.message, severity: "error" });
+          setConfirmState((p) => ({ ...p, loading: false }));
+        }
+      },
+      loading: false,
+    });
   };
 
   const openEditDialog = (item) => {
@@ -480,9 +506,11 @@ export default function CancellationPage() {
               const rn = student.receiptNumber;
               const row = rowState[rn] || {};
               const fee = student.payment?.amount || 0;
+              const isBoth = student.payment?.paymentMethod === "both";
               const split = getRefundSplit(
                 Number(row.finalSettlement),
                 student.payment,
+                row.refundMode,
               );
               const acc = acctStyle(student.payment?.settlementAccount);
 
@@ -679,6 +707,69 @@ export default function CancellationPage() {
                         }}
                       >
                         <p style={labelSx}>Refund Breakdown</p>
+
+                        {/* Mode toggle — only for 'both' payment method */}
+                        {isBoth && (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 0.5,
+                              mb: 1,
+                              p: 0.4,
+                              bgcolor: "#EEF2F7",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            {[
+                              { value: "proportional", label: "Proportional" },
+                              { value: "all-bank", label: "All Bank" },
+                              { value: "all-cash", label: "All Cash" },
+                            ].map((opt) => (
+                              <Box
+                                key={opt.value}
+                                onClick={() =>
+                                  handleField(rn, "refundMode", opt.value)
+                                }
+                                sx={{
+                                  flex: 1,
+                                  textAlign: "center",
+                                  py: 0.4,
+                                  px: 0.5,
+                                  borderRadius: "6px",
+                                  fontSize: "0.6rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  transition: "all 0.15s",
+                                  bgcolor:
+                                    (row.refundMode || "proportional") ===
+                                    opt.value
+                                      ? opt.value === "all-bank"
+                                        ? "#2563EB"
+                                        : opt.value === "all-cash"
+                                          ? "#16A34A"
+                                          : "#0F172A"
+                                      : "transparent",
+                                  color:
+                                    (row.refundMode || "proportional") ===
+                                    opt.value
+                                      ? "#fff"
+                                      : "#64748B",
+                                  "&:hover": {
+                                    bgcolor:
+                                      (row.refundMode || "proportional") ===
+                                      opt.value
+                                        ? undefined
+                                        : "#D1D5DB",
+                                  },
+                                  userSelect: "none",
+                                }}
+                              >
+                                {opt.label}
+                              </Box>
+                            ))}
+                          </Box>
+                        )}
+
                         <Box
                           sx={{
                             display: "flex",
@@ -927,7 +1018,14 @@ export default function CancellationPage() {
                       </IconButton>
                     </Box>
                   </Box>
-                  <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                    }}
+                  >
                     <Chip
                       label={`Refund: ${fmtCurrency(c.finalSettlement)}`}
                       size="small"
@@ -940,11 +1038,79 @@ export default function CancellationPage() {
                     <span style={{ fontSize: "0.75rem", color: "#64748B" }}>
                       Mode: {c.paymentMethod?.toUpperCase()}
                     </span>
-                    <span style={{ fontSize: "0.75rem", color: "#64748B" }}>
-                      Bank Part:{" "}
-                      {fmtCurrency(c.refundAccountA + c.refundAccountB)} | Cash
-                      Part: {fmtCurrency(c.refundCash)}
-                    </span>
+                    <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
+                      {c.refundAccountA > 0 && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              bgcolor: "#2563EB",
+                            }}
+                          />
+                          <span
+                            style={{ fontSize: "0.75rem", color: "#475569" }}
+                          >
+                            Account A:{" "}
+                            <strong>{fmtCurrency(c.refundAccountA)}</strong>
+                          </span>
+                        </Box>
+                      )}
+                      {c.refundAccountB > 0 && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              bgcolor: "#9333EA",
+                            }}
+                          />
+                          <span
+                            style={{ fontSize: "0.75rem", color: "#475569" }}
+                          >
+                            Account B:{" "}
+                            <strong>{fmtCurrency(c.refundAccountB)}</strong>
+                          </span>
+                        </Box>
+                      )}
+                      {c.refundCash > 0 && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              bgcolor: "#16A34A",
+                            }}
+                          />
+                          <span
+                            style={{ fontSize: "0.75rem", color: "#475569" }}
+                          >
+                            Cash: <strong>{fmtCurrency(c.refundCash)}</strong>
+                          </span>
+                        </Box>
+                      )}
+                    </Box>
                   </Box>
                 </Box>
               ))
@@ -1018,6 +1184,64 @@ export default function CancellationPage() {
             </Button>
           </Box>
         </Box>
+      </Dialog>
+
+      {/* ── CONFIRMATION DIALOG ── */}
+      <Dialog
+        open={confirmState.open}
+        onClose={confirmState.loading ? null : closeConfirm}
+        slotProps={{ paper: { sx: { borderRadius: "16px", p: 1 } } }}
+      >
+        <DialogContent>
+          <p
+            style={{
+              margin: 0,
+              fontWeight: 800,
+              fontSize: "1.1rem",
+              color: "#0F172A",
+            }}
+          >
+            {confirmState.title}
+          </p>
+          <p
+            style={{
+              marginTop: 8,
+              fontSize: "0.9rem",
+              color: "#64748B",
+              lineHeight: 1.5,
+            }}
+          >
+            {confirmState.message}
+          </p>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button
+            onClick={closeConfirm}
+            disabled={confirmState.loading}
+            sx={{ borderRadius: "10px", fontWeight: 700, color: "#64748B" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={confirmState.onConfirm}
+            disabled={confirmState.loading}
+            sx={{
+              borderRadius: "10px",
+              fontWeight: 700,
+              bgcolor: confirmState.title.includes("Undo")
+                ? "#2563EB"
+                : "#0F172A",
+              px: 3,
+            }}
+          >
+            {confirmState.loading ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              "Confirm"
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <Snackbar

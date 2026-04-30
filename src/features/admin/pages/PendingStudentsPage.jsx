@@ -201,7 +201,7 @@ export default function PendingStudentsPage() {
     const interval = setInterval(() => {
       loadStudents(true);
       loadStats();
-    }, 5000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [autoRefresh, loadStudents, loadStats]);
 
@@ -299,7 +299,7 @@ export default function PendingStudentsPage() {
                   color: "#64748B",
                 }}
               >
-                Auto-Refresh (5s)
+                Auto-Refresh (10s)
               </span>
             }
           />
@@ -405,8 +405,9 @@ export default function PendingStudentsPage() {
               }}
             />
           </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
+              label="Department"
               select
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
@@ -430,8 +431,9 @@ export default function PendingStudentsPage() {
               ))}
             </TextField>
           </Grid>
-          <Grid size={{ xs: 6, md: 2 }}>
+          <Grid size={{ xs: 12, md: 2 }}>
             <TextField
+              label="Year"
               select
               value={year}
               onChange={(e) => setYear(e.target.value)}
@@ -455,8 +457,9 @@ export default function PendingStudentsPage() {
               ))}
             </TextField>
           </Grid>
-          <Grid size={{ xs: 10, md: 3 }}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
+              label="Pickup Point"
               select
               value={pickupPoint}
               onChange={(e) => setPickupPoint(e.target.value)}
@@ -479,20 +482,6 @@ export default function PendingStudentsPage() {
                 </MenuItem>
               ))}
             </TextField>
-          </Grid>
-          <Grid size={{ xs: 2, md: 1 }}>
-            <Tooltip title="Advanced Filters">
-              <IconButton
-                sx={{
-                  border: "1px solid #E2E8F0",
-                  borderRadius: "10px",
-                  width: 42,
-                  height: 42,
-                }}
-              >
-                <TuneOutlined sx={{ fontSize: 20, color: "#64748B" }} />
-              </IconButton>
-            </Tooltip>
           </Grid>
         </Grid>
       </Paper>

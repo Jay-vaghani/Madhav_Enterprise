@@ -26,8 +26,7 @@ import {
   Shield,
 } from "@mui/icons-material";
 import imageCompression from "browser-image-compression";
-import { useRegistration } from "../context/RegistrationContext";
-import { DEPARTMENTS, PICKUP_POINTS, SHIFTS, YEARS } from "../utils/data";
+import { useRegistration, YEARS } from "../context/RegistrationContext";
 import ImageCropModal from "../../../components/ImageCropModal";
 
 async function compressToWebpUnder50KB(base64Input, maxKB = 50) {
@@ -283,6 +282,21 @@ function EditAutocomplete({ fieldKey, label, options }) {
   );
 }
 
+// ── Inline Autocomplete Wrapper (uses dynamic data from context) ────────────
+function EditAutocompleteWrapper({ fieldKey, label, type }) {
+  const { departments, pickupPoints } = useRegistration();
+  
+  const options = type === "departments" ? departments : pickupPoints;
+  
+  return (
+    <EditAutocomplete 
+      fieldKey={fieldKey} 
+      label={label} 
+      options={options} 
+    />
+  );
+}
+
 // ── Inline Year Select ─────────────────────────────────────────
 function EditYear() {
   const { formData, updateFormData } = useRegistration();
@@ -355,9 +369,9 @@ function EditYear() {
 
 // ── Inline Shift Select ────────────────────────────────────────
 function EditShift() {
-  const { formData, updateFormData } = useRegistration();
+  const { formData, updateFormData, shifts } = useRegistration();
   const [editing, setEditing] = useState(false);
-  const cur = SHIFTS.find((s) => s.id === formData.shift);
+  const cur = shifts.find((s) => s.id === formData.shift);
 
   if (editing)
     return (
@@ -375,7 +389,7 @@ function EditShift() {
             onClose={() => setEditing(false)}
             sx={{ borderRadius: "8px", bgcolor: "white", fontSize: "0.88rem" }}
           >
-            {SHIFTS.map((s) => (
+            {shifts.map((s) => (
               <MenuItem key={s.id} value={s.id}>
                 {s.emoji} {s.label} — {s.time}
               </MenuItem>
@@ -943,11 +957,7 @@ export default function FinalReviewStep() {
               <Box sx={{ mt: 1.5 }}>
                 <SectionHeader label="Academic Identity" />
                 <EditText fieldKey="enrollmentNumber" label="Enrollment No." />
-                <EditAutocomplete
-                  fieldKey="department"
-                  label="Department"
-                  options={DEPARTMENTS}
-                />
+                <EditAutocompleteWrapper fieldKey="department" label="Department" type="departments" />
                 <EditYear />
                 <EditShift />
               </Box>
@@ -955,22 +965,12 @@ export default function FinalReviewStep() {
               {/* ── Transport ── */}
               <Box sx={{ mt: 1.5 }}>
                 <SectionHeader label="Transport" />
-                <EditAutocomplete
-                  fieldKey="pickupPoint"
-                  label="Pickup Point"
-                  options={PICKUP_POINTS}
-                />
+                <EditAutocompleteWrapper fieldKey="pickupPoint" label="Pickup Point" type="pickupPoints" />
                 {pickup && (
-                  <>
-                    <Box sx={{ mb: 1.5 }}>
-                      <p style={lbl}>Departure Time</p>
-                      <p style={val}>{pickup.time}</p>
-                    </Box>
-                    <Box sx={{ mb: 1.5 }}>
-                      <p style={lbl}>Annual Fee</p>
-                      <p style={val}>₹ {pickup.fee.toLocaleString("en-IN")}</p>
-                    </Box>
-                  </>
+                  <Box sx={{ mb: 1.5 }}>
+                    <p style={lbl}>Annual Fee</p>
+                    <p style={val}>₹ {pickup.fee?.toLocaleString("en-IN")}</p>
+                  </Box>
                 )}
               </Box>
 

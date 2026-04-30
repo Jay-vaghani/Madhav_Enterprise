@@ -1,18 +1,13 @@
 import React from "react";
 import { Box, Tab } from "@mui/material";
 import { TabList } from "@mui/lab";
-import {
-  AccountBalance,
-  Assignment,
-  Business,
-  Fingerprint,
-} from "@mui/icons-material";
+import { Assignment, Person, School, LocationOn } from "@mui/icons-material";
 
 const STEPS = [
-  { label: "Company Details", Icon: Business, value: "1" },
-  { label: "Identity Verification", Icon: Fingerprint, value: "2" },
-  { label: "Financial Information", Icon: AccountBalance, value: "3" },
-  { label: "Final Review", Icon: Assignment, value: "4" },
+  { label: "Students Details", Icon: Person, value: "1" },
+  { label: "Academics Details", Icon: School, value: "2" },
+  { label: "Pickup Point", Icon: LocationOn, value: "3" },
+  { label: "Declaration", Icon: Assignment, value: "4" },
 ];
 
 /**

@@ -173,7 +173,14 @@ export default function PersonalDetailsStep() {
               <Controller
                 name="mobile"
                 control={control}
-                rules={{ required: "Mobile number is required" }}
+                rules={{
+                  required: "Student mobile is required",
+                  pattern: {
+                    value: /^[6-9]\d{9}$/,
+                    message:
+                      "Invalid mobile number. Please enter 10 digits Number",
+                  },
+                }}
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
@@ -203,7 +210,13 @@ export default function PersonalDetailsStep() {
               <Controller
                 name="guardianMobile"
                 control={control}
-                rules={{ required: "Guardian mobile is required" }}
+                rules={{
+                  pattern: {
+                    value: /^[6-9]\d{9}$/,
+                    message:
+                      "Invalid mobile number. Please enter 10 digits Number",
+                  },
+                }}
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}

@@ -86,10 +86,14 @@ export const approveStudent = async (token, studentId, approvalData) => {
 /**
  * PATCH /api/admin/students/:id/reject
  */
-export const rejectStudent = async (token, studentId) => {
+export const rejectStudent = async (token, studentId, reason = '') => {
   const response = await fetch(
     `${API_BASE_URL}/admin/students/${studentId}/reject`,
-    { method: "PATCH", headers: authHeaders(token) }
+    {
+      method: "PATCH",
+      headers: authHeaders(token),
+      body: JSON.stringify({ reason }),
+    }
   );
 
   if (!response.ok) {
@@ -105,6 +109,52 @@ export const rejectStudent = async (token, studentId) => {
 
   return response.json();
 };
+
+/**
+ * GET /api/admin/students/rejected
+ */
+export const fetchRejectedStudents = async (token, page = 1, limit = 50) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/students/rejected?page=${page}&limit=${limit}`,
+    { headers: authHeaders(token) }
+  );
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch rejected students");
+  }
+  return response.json();
+};
+
+/**
+ * POST /api/admin/rejected-students/:id/restore
+ */
+export const restoreRejectedStudent = async (token, id) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/rejected-students/${id}/restore`,
+    { method: "POST", headers: authHeaders(token) }
+  );
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to restore student");
+  }
+  return response.json();
+};
+
+/**
+ * DELETE /api/admin/rejected-students/:id
+ */
+export const permanentDeleteRejected = async (token, id) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/rejected-students/${id}`,
+    { method: "DELETE", headers: authHeaders(token) }
+  );
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to delete record");
+  }
+  return response.json();
+};
+
 
 /**
  * POST /api/admin/students/:id/update-photo
@@ -386,5 +436,415 @@ export const editCancellation = async (token, id, payload) => {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.message || "Failed to edit cancellation");
   }
+  return response.json();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Temporary Passes API
+// ═══════════════════════════════════════════════════════════════
+
+export const generateTemporaryPass = async (token, payload) => {
+  const response = await fetch(`${API_BASE_URL}/admin/temporary-passes`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to generate pass");
+  }
+  return response.json();
+};
+
+export const fetchTemporaryPasses = async (token, filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.search) params.set("search", filters.search);
+  if (filters.department) params.set("department", filters.department);
+  if (filters.pickupPoint) params.set("pickupPoint", filters.pickupPoint);
+  if (filters.fromDate) params.set("fromDate", filters.fromDate);
+  if (filters.toDate) params.set("toDate", filters.toDate);
+  if (filters.page) params.set("page", String(filters.page));
+  if (filters.limit) params.set("limit", String(filters.limit));
+
+  const qs = params.toString();
+  const url = `${API_BASE_URL}/admin/temporary-passes${qs ? "?" + qs : ""}`;
+
+  const response = await fetch(url, { headers: authHeaders(token) });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch passes");
+  }
+  return response.json();
+};
+
+export const updateTemporaryPass = async (token, id, payload) => {
+  const response = await fetch(`${API_BASE_URL}/admin/temporary-passes/${id}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to update pass");
+  }
+  return response.json();
+};
+
+export const deleteTemporaryPass = async (token, id) => {
+  const response = await fetch(`${API_BASE_URL}/admin/temporary-passes/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to delete pass");
+  }
+  return response.json();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Settings Management API - Shifts, Departments, Pickup Points
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/settings/public
+ * Get public settings for registration form (no auth required)
+ */
+export const getPublicSettings = async () => {
+  const response = await fetch(`${API_BASE_URL}/settings/public`);
+
+  if (!response.ok) {
+    let errorMessage = "Failed to fetch settings";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+// Shifts
+export const fetchAllShifts = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/settings/shifts`, {
+    headers: authHeaders(token),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to fetch shifts";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const createShift = async (token, shiftData) => {
+  const response = await fetch(`${API_BASE_URL}/settings/shifts`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(shiftData),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to create shift";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const updateShift = async (token, id, shiftData) => {
+  const response = await fetch(`${API_BASE_URL}/settings/shifts/${id}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(shiftData),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to update shift";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const deleteShift = async (token, id) => {
+  const response = await fetch(`${API_BASE_URL}/settings/shifts/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to delete shift";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+// Departments
+export const fetchAllDepartments = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/settings/departments`, {
+    headers: authHeaders(token),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to fetch departments";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const createDepartment = async (token, departmentData) => {
+  const response = await fetch(`${API_BASE_URL}/settings/departments`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(departmentData),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to create department";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const updateDepartment = async (token, id, departmentData) => {
+  const response = await fetch(`${API_BASE_URL}/settings/departments/${id}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(departmentData),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to update department";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const deleteDepartment = async (token, id) => {
+  const response = await fetch(`${API_BASE_URL}/settings/departments/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to delete department";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+// Pickup Points
+export const fetchAllPickupPoints = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/settings/pickup-points`, {
+    headers: authHeaders(token),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to fetch pickup points";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const createPickupPoint = async (token, pickupPointData) => {
+  const response = await fetch(`${API_BASE_URL}/settings/pickup-points`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(pickupPointData),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to create pickup point";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const updatePickupPoint = async (token, id, pickupPointData) => {
+  const response = await fetch(`${API_BASE_URL}/settings/pickup-points/${id}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(pickupPointData),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to update pickup point";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const deletePickupPoint = async (token, id) => {
+  const response = await fetch(`${API_BASE_URL}/settings/pickup-points/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to delete pickup point";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Staff Management API
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * POST /api/auth/staff
+ * Create a new staff user (admin only)
+ */
+export const createStaff = async (token, staffData) => {
+  const response = await fetch(`${API_BASE_URL}/auth/staff`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(staffData),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to create staff user";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+/**
+ * GET /api/auth/staff
+ * Get all staff users (admin only)
+ */
+export const fetchAllStaff = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/auth/staff`, {
+    headers: authHeaders(token),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to fetch staff users";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+/**
+ * DELETE /api/auth/staff/:id
+ * Delete a staff user (admin only)
+ */
+export const deleteStaff = async (token, id) => {
+  const response = await fetch(`${API_BASE_URL}/auth/staff/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to delete staff user";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
   return response.json();
 };

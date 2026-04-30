@@ -10,6 +10,9 @@ import {
   LogoutOutlined,
   DirectionsBus,
   MoneyOffOutlined,
+  DoNotDisturbAltOutlined,
+  ConfirmationNumberOutlined,
+  ManageAccountsOutlined,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -28,9 +31,21 @@ const NAV_ITEMS = [
     active: false,
   },
   {
+    id: "rejected",
+    label: "Rejected Students",
+    icon: DoNotDisturbAltOutlined,
+    active: false,
+  },
+  {
     id: "reports",
     label: "Reports",
     icon: BarChartOutlined,
+    active: false,
+  },
+  {
+    id: "temporary_passes",
+    label: "Temporary Passes",
+    icon: ConfirmationNumberOutlined,
     active: false,
   },
   {
@@ -39,11 +54,24 @@ const NAV_ITEMS = [
     icon: MoneyOffOutlined,
     active: false,
   },
+  {
+    id: "staff_management",
+    label: "Staff Management",
+    icon: ManageAccountsOutlined,
+    active: false,
+    adminOnly: true,
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: SettingsOutlined,
+    active: false,
+    adminOnly: true,
+  },
 ];
 
 const BOTTOM_ITEMS = [
   { id: "routes", label: "Add & Edit Route", icon: AddRoadOutlined, accent: true, disabled: true },
-  { id: "settings", label: "Settings", icon: SettingsOutlined, disabled: true },
   { id: "support", label: "Support", icon: HelpOutlineOutlined, disabled: true },
 ];
 
@@ -114,7 +142,7 @@ export default function AdminSidebar({ activePage, onPageChange }) {
 
       {/* Nav Items */}
       <Box sx={{ flex: 1, px: 1.5, pt: 1 }}>
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => !item.adminOnly || user?.role === "admin").map((item) => {
           const Icon = item.icon;
           const isActive = activePage === item.id;
           return (

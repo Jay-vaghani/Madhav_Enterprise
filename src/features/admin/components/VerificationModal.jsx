@@ -20,6 +20,7 @@ import {
   Autocomplete,
   FormControl,
   Select,
+  Tooltip,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import {
@@ -31,6 +32,9 @@ import {
   CropOutlined,
   AddOutlined,
   RemoveOutlined,
+  DoNotDisturbAltOutlined,
+  VisibilityOutlined,
+  VisibilityOffOutlined,
 } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";
 import { useAuth } from "../context/AuthContext";
@@ -38,14 +42,11 @@ import {
   approveStudent,
   rejectStudent,
   fetchPaymentStats,
+  fetchAllDepartments,
+  fetchAllPickupPoints,
+  fetchAllShifts,
 } from "../../../api/admin/api";
 import ImageCropModal from "../../../components/ImageCropModal";
-import {
-  DEPARTMENTS,
-  PICKUP_POINTS,
-  SHIFTS,
-  YEARS,
-} from "../../registration/utils/data";
 
 // ── Compress a base64/blob-URL image to WEBP ≤ 50 KB (browser canvas) ────
 async function compressToWebpUnder50KB(base64Input, maxKB = 50) {
@@ -123,26 +124,61 @@ const formatCurrency = (n) => "₹" + Number(n || 0).toLocaleString("en-IN");
 // ── Shared input style ─────────────────────────────────────────
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
-    borderRadius: "10px",
-    bgcolor: "#F8FAFC",
-    fontSize: "0.85rem",
+    borderRadius: "12px",
+    bgcolor: "#FFFFFF",
+    fontSize: "0.88rem",
+    transition: "all 0.2s ease-in-out",
+    border: "1px solid #E2E8F0",
+    "& fieldset": { border: "none" },
+    "&:hover": {
+      bgcolor: "#F8FAFC",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+    },
+    "&.Mui-focused": {
+      bgcolor: "#FFFFFF",
+      boxShadow: "0 4px 12px rgba(37,99,235,0.08)",
+      border: "1px solid #2563EB",
+    },
   },
 };
+
 const labelSx = {
-  margin: "0 0 4px 0",
-  fontSize: "0.62rem",
-  fontWeight: 700,
-  color: "#2563EB",
-  textTransform: "uppercase",
-  letterSpacing: "0.08em",
-};
-const sectionSx = {
   margin: "0 0 6px 0",
-  fontSize: "0.68rem",
-  fontWeight: 800,
-  color: "#64748B",
+  fontSize: "0.7rem",
+  fontWeight: 700,
+  color: "#475569",
   textTransform: "uppercase",
-  letterSpacing: "0.1em",
+  letterSpacing: "0.06em",
+};
+
+const sectionSx = {
+  margin: "0 0 12px 0",
+  fontSize: "0.75rem",
+  fontWeight: 800,
+  color: "#1E293B",
+  textTransform: "uppercase",
+  letterSpacing: "0.12em",
+  display: "flex",
+  alignItems: "center",
+  gap: 1,
+  "&::after": {
+    content: '""',
+    flex: 1,
+    height: "1px",
+    bgcolor: "#E2E8F0",
+  },
+};
+
+const premiumCardSx = {
+  bgcolor: "#FFFFFF",
+  border: "1px solid #E2E8F0",
+  borderRadius: "18px",
+  p: 3,
+  boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+  "&:hover": {
+    boxShadow: "0 8px 30px rgba(0,0,0,0.04)",
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -176,6 +212,37 @@ export default function VerificationModal({
   const [rejecting, setRejecting] = useState(false);
   const [error, setError] = useState("");
   const [showTransaction2, setShowTransaction2] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  
+  // Dynamic data from API
+  const [departments, setDepartments] = useState([]);
+  const [pickupPoints, setPickupPoints] = useState([]);
+  const [shifts, setShifts] = useState([]);
+  const YEARS = [
+    { value: "1", label: "First Year", autoSemester: "Semester 1-2", semesters: [{ value: "Semester 1-2", label: "Semester 1 - 2" }] },
+    { value: "2", label: "Second Year", autoSemester: "Semester 3-4", semesters: [{ value: "Semester 3-4", label: "Semester 3 - 4" }] },
+    { value: "3", label: "Third Year", autoSemester: "Semester 5-6", semesters: [{ value: "Semester 5-6", label: "Semester 5 - 6" }] },
+    { value: "4", label: "Fourth Year", autoSemester: "Semester 7-8", semesters: [{ value: "Semester 7-8", label: "Semester 7 - 8" }] },
+  ];
+
+  // Fetch dynamic data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [deptRes, pointRes, shiftRes] = await Promise.all([
+          fetchAllDepartments(token),
+          fetchAllPickupPoints(token),
+          fetchAllShifts(token),
+        ]);
+        if (deptRes.success) setDepartments(deptRes.departments);
+        if (pointRes.success) setPickupPoints(pointRes.pickupPoints);
+        if (shiftRes.success) setShifts(shiftRes.shifts);
+      } catch (err) {
+        console.error("Failed to load data:", err);
+      }
+    };
+    if (open) loadData();
+  }, [token, open]);
 
   const {
     control,
@@ -243,11 +310,11 @@ export default function VerificationModal({
     if (student) {
       // Find matching department/pickupPoint objects from data
       const deptObj =
-        DEPARTMENTS.find((d) => d.id === student.department?.id) ||
+        departments.find((d) => d.id === student.department?.id) ||
         student.department ||
         null;
       const ppObj =
-        PICKUP_POINTS.find((p) => p.id === student.pickupPoint?.id) ||
+        pickupPoints.find((p) => p.id === student.pickupPoint?.id) ||
         student.pickupPoint ||
         null;
 
@@ -364,22 +431,26 @@ export default function VerificationModal({
     }
   };
 
+  // ── Reject Dialog State ──────────────────────────────────────
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const openRejectDialog = () => {
+    setRejectReason("");
+    setRejectDialogOpen(true);
+  };
+
   // ── Reject ──────────────────────────────────────────────────
   const handleReject = async () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to reject this registration? This action cannot be undone.",
-      )
-    )
-      return;
     setRejecting(true);
     setError("");
-
     try {
-      await rejectStudent(token, student._id);
+      await rejectStudent(token, student._id, rejectReason);
+      setRejectDialogOpen(false);
       onActionComplete?.("rejected");
     } catch (err) {
       setError(err.message || "Failed to reject student");
+      setRejectDialogOpen(false);
     } finally {
       setRejecting(false);
     }
@@ -478,121 +549,191 @@ export default function VerificationModal({
               {/* ── Photo Section ── */}
               <Box
                 sx={{
-                  bgcolor: "#EFF6FF",
-                  borderRadius: "14px",
-                  p: 2.5,
-                  mb: 3,
+                  background:
+                    "linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)",
+                  borderRadius: "20px",
+                  p: 4,
+                  mb: 4,
                   display: "flex",
                   flexDirection: { xs: "column", sm: "row" },
-                  alignItems: { xs: "center", sm: "flex-start" },
-                  gap: 2.5,
+                  alignItems: "center",
+                  gap: 4,
+                  border: "1px solid #BAE6FD",
+                  position: "relative",
+                  overflow: "hidden",
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    top: -50,
+                    right: -50,
+                    width: 150,
+                    height: 150,
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.3)",
+                    filter: "blur(40px)",
+                  },
                 }}
               >
-                <Box sx={{ position: "relative" }}>
+                <Box sx={{ position: "relative", zIndex: 1 }}>
                   {compressing ? (
                     <Box
                       sx={{
-                        width: 150,
-                        height: 150,
-                        borderRadius: "14px",
+                        width: 160,
+                        height: 160,
+                        borderRadius: "20px",
                         bgcolor: "white",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
                       }}
                     >
-                      <CircularProgress size={28} />
+                      <CircularProgress
+                        size={32}
+                        thickness={5}
+                        sx={{ color: "#2563EB" }}
+                      />
                     </Box>
                   ) : (
                     <Avatar
                       src={photoPreview}
                       alt={student.fullName}
                       sx={{
-                        width: 150,
-                        height: 150,
-                        borderRadius: "14px",
-                        border: "3px solid white",
-                        boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
+                        width: 160,
+                        height: 160,
+                        borderRadius: "20px",
+                        border: "4px solid white",
+                        boxShadow: "0 12px 35px rgba(0,0,0,0.08)",
+                        transition: "transform 0.3s ease",
+                        "&:hover": { transform: "scale(1.02)" },
                       }}
                       variant="rounded"
                     />
                   )}
-                </Box>
-                <Box
-                  sx={{
-                    minWidth: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: { xs: "center", sm: "flex-start" },
-                    textAlign: { xs: "center", sm: "left" },
-                  }}
-                >
-                  <p
-                    style={{
-                      margin: 0,
-                      fontWeight: 800,
-                      fontSize: "calc(2.5vw + 1vh)",
-                      color: "#0F172A",
-                    }}
-                  >
-                    {student.fullName}
-                  </p>
                   <Box
                     sx={{
+                      position: "absolute",
+                      bottom: -12,
+                      right: -12,
                       display: "flex",
-                      gap: 1.5,
-                      mt: 1,
-                      alignItems: "center",
+                      gap: 1,
                     }}
                   >
                     {photoPreview && (
+                      <Tooltip title="Crop Image">
+                        <IconButton
+                          onClick={() => {
+                            setCropSrc(photoPreview);
+                            setCropOpen(true);
+                          }}
+                          sx={{
+                            bgcolor: "#10B981",
+                            color: "white",
+                            width: 36,
+                            height: 36,
+                            boxShadow: "0 4px 12px rgba(16,185,129,0.4)",
+                            "&:hover": {
+                              bgcolor: "#059669",
+                              transform: "translateY(-2px)",
+                            },
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          <CropOutlined sx={{ fontSize: 20 }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Upload New Photo">
                       <IconButton
-                        onClick={() => {
-                          setCropSrc(photoPreview);
-                          setCropOpen(true);
-                        }}
+                        onClick={() => fileInputRef.current?.click()}
                         sx={{
-                          bgcolor: "#10B981",
+                          bgcolor: "#2563EB",
                           color: "white",
-                          width: 32,
-                          height: 32,
-                          "&:hover": { bgcolor: "#059669" },
-                          boxShadow: "0 2px 6px rgba(16,185,129,0.3)",
+                          width: 36,
+                          height: 36,
+                          boxShadow: "0 4px 12px rgba(37,99,235,0.4)",
+                          "&:hover": {
+                            bgcolor: "#1D4ED8",
+                            transform: "translateY(-2px)",
+                          },
+                          transition: "all 0.2s",
                         }}
                       >
-                        <CropOutlined sx={{ fontSize: 18 }} />
+                        <CameraAltOutlined sx={{ fontSize: 20 }} />
                       </IconButton>
-                    )}
-                    <IconButton
-                      onClick={() => fileInputRef.current?.click()}
-                      sx={{
-                        bgcolor: "#2563EB",
-                        color: "white",
-                        width: 32,
-                        height: 32,
-                        "&:hover": { bgcolor: "#1D4ED8" },
-                        boxShadow: "0 2px 6px rgba(37,99,235,0.3)",
+                    </Tooltip>
+                  </Box>
+                </Box>
+
+                <Box
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    textAlign: { xs: "center", sm: "left" },
+                    zIndex: 1,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      mb: 0.5,
+                      justifyContent: { xs: "center", sm: "flex-start" },
+                    }}
+                  >
+                    <p
+                      style={{
+                        margin: 0,
+                        fontWeight: 900,
+                        fontSize: "2rem",
+                        color: "#0F172A",
+                        letterSpacing: "-0.02em",
+                        lineHeight: 1.1,
                       }}
                     >
-                      <CameraAltOutlined sx={{ fontSize: 18 }} />
-                    </IconButton>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={handlePhotoFileSelect}
-                    />
+                      {student.fullName}
+                    </p>
                   </Box>
-                  {newPhotoBase64 && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 1,
+                      flexWrap: "wrap",
+                      mt: 1,
+                      justifyContent: { xs: "center", sm: "flex-start" },
+                    }}
+                  >
                     <Chip
-                      label="New photo selected"
+                      label={student.enrollmentNumber || "No Enrollment"}
                       size="small"
-                      color="success"
-                      sx={{ mt: 0.5, height: 20, fontSize: "0.65rem" }}
+                      sx={{
+                        bgcolor: "white",
+                        fontWeight: 700,
+                        color: "#475569",
+                        border: "1px solid #E2E8F0",
+                      }}
                     />
-                  )}
+                    {newPhotoBase64 && (
+                      <Chip
+                        label="New photo selected"
+                        size="small"
+                        color="success"
+                        sx={{
+                          fontWeight: 700,
+                          boxShadow: "0 2px 8px rgba(16,185,129,0.2)",
+                        }}
+                      />
+                    )}
+                  </Box>
                 </Box>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={handlePhotoFileSelect}
+                />
               </Box>
 
               {/* ── Student Identification ── */}
@@ -697,7 +838,7 @@ export default function VerificationModal({
                         rules={{ required: "Department is required" }}
                         render={({ field }) => (
                           <Autocomplete
-                            options={DEPARTMENTS}
+                            options={departments}
                             value={field.value}
                             getOptionLabel={(o) => o?.label ?? ""}
                             isOptionEqualToValue={(o, v) => o?.id === v?.id}
@@ -737,7 +878,7 @@ export default function VerificationModal({
                               gap: 1,
                             }}
                           >
-                            {SHIFTS.map((shift) => {
+                            {shifts.map((shift) => {
                               const isSelected = field.value === shift.id;
                               return (
                                 <Box
@@ -843,7 +984,7 @@ export default function VerificationModal({
                         rules={{ required: "Pickup point is required" }}
                         render={({ field }) => (
                           <Autocomplete
-                            options={PICKUP_POINTS}
+                            options={pickupPoints}
                             value={field.value}
                             getOptionLabel={(o) =>
                               o?.label
@@ -970,34 +1111,54 @@ export default function VerificationModal({
                 </Grid>
               </Grid>
 
-              {/* ════════════ PAYMENT AUTHORIZATION ════════════ */}
-              <Box
-                sx={{
-                  bgcolor: "#FAFBFC",
-                  border: "1px solid #E2E8F0",
-                  borderRadius: "14px",
-                  p: { xs: 2, sm: 2.5 },
-                }}
-              >
+              {/* ── Payment Authorization ── */}
+              <Box sx={premiumCardSx}>
                 <Box
-                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    mb: 3,
+                  }}
                 >
-                  <ReceiptLongOutlined
-                    sx={{ fontSize: 20, color: "#0F172A" }}
-                  />
-                  <p
-                    style={{
-                      margin: 0,
-                      fontWeight: 800,
-                      fontSize: "0.95rem",
-                      color: "#0F172A",
+                  <Box
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: "10px",
+                      bgcolor: "#EFF6FF",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#2563EB",
                     }}
                   >
-                    Payment Authorization
-                  </p>
+                    <ReceiptLongOutlined sx={{ fontSize: 20 }} />
+                  </Box>
+                  <Box>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontWeight: 800,
+                        fontSize: "1rem",
+                        color: "#0F172A",
+                      }}
+                    >
+                      Payment Authorization
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.75rem",
+                        color: "#64748B",
+                      }}
+                    >
+                      Finalize the registration fee and collection
+                    </p>
+                  </Box>
                 </Box>
 
-                <Grid container spacing={2}>
+                <Grid container spacing={3}>
                   {/* Payment Mode */}
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <p style={labelSx}>Payment Mode</p>
@@ -1020,24 +1181,33 @@ export default function VerificationModal({
                               }
                               sx={{
                                 fontWeight: 700,
-                                fontSize: "0.78rem",
-                                borderRadius: "8px",
-                                height: 34,
+                                fontSize: "0.8rem",
+                                borderRadius: "10px",
+                                height: 38,
+                                px: 1,
                                 ...(field.value === mode
                                   ? {
                                       bgcolor: "#2563EB",
                                       color: "white",
                                       borderColor: "#2563EB",
+                                      boxShadow:
+                                        "0 4px 12px rgba(37,99,235,0.25)",
                                     }
                                   : {
-                                      borderColor: "#CBD5E1",
-                                      color: "#334155",
+                                      borderColor: "#E2E8F0",
+                                      color: "#64748B",
+                                      bgcolor: "transparent",
                                     }),
+                                transition: "all 0.2s",
                                 "&:hover": {
                                   bgcolor:
                                     field.value === mode
                                       ? "#1D4ED8"
-                                      : "#F1F5F9",
+                                      : "#F8FAFC",
+                                  borderColor:
+                                    field.value === mode
+                                      ? "#1D4ED8"
+                                      : "#CBD5E1",
                                 },
                               }}
                             />
@@ -1068,8 +1238,12 @@ export default function VerificationModal({
                               label={
                                 <span
                                   style={{
-                                    fontSize: "0.85rem",
+                                    fontSize: "0.88rem",
                                     fontWeight: 600,
+                                    color:
+                                      field.value === "A"
+                                        ? "#2563EB"
+                                        : "#475569",
                                   }}
                                 >
                                   Account A
@@ -1082,8 +1256,12 @@ export default function VerificationModal({
                               label={
                                 <span
                                   style={{
-                                    fontSize: "0.85rem",
+                                    fontSize: "0.88rem",
                                     fontWeight: 600,
+                                    color:
+                                      field.value === "B"
+                                        ? "#2563EB"
+                                        : "#475569",
                                   }}
                                 >
                                   Account B
@@ -1096,9 +1274,9 @@ export default function VerificationModal({
                       {errors.settlementAccount && (
                         <p
                           style={{
-                            margin: "4px 0 0 14px",
+                            margin: "4px 0 0 4px",
                             fontSize: "0.75rem",
-                            color: "#d32f2f",
+                            color: "#DC2626",
                           }}
                         >
                           {errors.settlementAccount.message}
@@ -1116,6 +1294,7 @@ export default function VerificationModal({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
+                          mb: 0.5,
                         }}
                       >
                         <p style={labelSx}>Transaction ID 1 *</p>
@@ -1124,14 +1303,17 @@ export default function VerificationModal({
                             size="small"
                             onClick={() => setShowTransaction2(true)}
                             sx={{
-                              bgcolor: "#EFF6FF",
-                              color: "#2563EB",
-                              width: 22,
-                              height: 22,
-                              "&:hover": { bgcolor: "#DBEAFE" },
+                              bgcolor: "#F1F5F9",
+                              color: "#64748B",
+                              width: 24,
+                              height: 24,
+                              "&:hover": {
+                                bgcolor: "#E2E8F0",
+                                color: "#2563EB",
+                              },
                             }}
                           >
-                            <AddOutlined sx={{ fontSize: 14 }} />
+                            <AddOutlined sx={{ fontSize: 16 }} />
                           </IconButton>
                         )}
                       </Box>
@@ -1176,6 +1358,7 @@ export default function VerificationModal({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
+                            mb: 0.5,
                           }}
                         >
                           <p style={labelSx}>Transaction ID 2</p>
@@ -1188,12 +1371,12 @@ export default function VerificationModal({
                             sx={{
                               bgcolor: "#FEF2F2",
                               color: "#DC2626",
-                              width: 22,
-                              height: 22,
+                              width: 24,
+                              height: 24,
                               "&:hover": { bgcolor: "#FEE2E2" },
                             }}
                           >
-                            <RemoveOutlined sx={{ fontSize: 14 }} />
+                            <RemoveOutlined sx={{ fontSize: 16 }} />
                           </IconButton>
                         </Box>
                         <Controller
@@ -1254,7 +1437,11 @@ export default function VerificationModal({
                             input: {
                               startAdornment: (
                                 <InputAdornment position="start">
-                                  ₹
+                                  <Box
+                                    sx={{ color: "#94A3B8", fontWeight: 700 }}
+                                  >
+                                    ₹
+                                  </Box>
                                 </InputAdornment>
                               ),
                             },
@@ -1286,13 +1473,32 @@ export default function VerificationModal({
                               fullWidth
                               type="tel"
                               inputProps={{ inputMode: "numeric" }}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                field.onChange(val);
+                                const fee = Number(watch("feeAmount")) || 0;
+                                const cash = Number(val) || 0;
+                                if (fee > 0) {
+                                  setValue(
+                                    "bankAmount",
+                                    Math.max(0, fee - cash).toString(),
+                                  );
+                                }
+                              }}
                               error={!!errors.cashAmount}
                               helperText={errors.cashAmount?.message}
                               slotProps={{
                                 input: {
                                   startAdornment: (
                                     <InputAdornment position="start">
-                                      ₹
+                                      <Box
+                                        sx={{
+                                          color: "#94A3B8",
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        ₹
+                                      </Box>
                                     </InputAdornment>
                                   ),
                                 },
@@ -1320,13 +1526,32 @@ export default function VerificationModal({
                               fullWidth
                               type="tel"
                               inputProps={{ inputMode: "numeric" }}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                field.onChange(val);
+                                const fee = Number(watch("feeAmount")) || 0;
+                                const bank = Number(val) || 0;
+                                if (fee > 0) {
+                                  setValue(
+                                    "cashAmount",
+                                    Math.max(0, fee - bank).toString(),
+                                  );
+                                }
+                              }}
                               error={!!errors.bankAmount}
                               helperText={errors.bankAmount?.message}
                               slotProps={{
                                 input: {
                                   startAdornment: (
                                     <InputAdornment position="start">
-                                      ₹
+                                      <Box
+                                        sx={{
+                                          color: "#94A3B8",
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        ₹
+                                      </Box>
                                     </InputAdornment>
                                   ),
                                 },
@@ -1344,7 +1569,7 @@ export default function VerificationModal({
                     <p style={labelSx}>Validity Expiration</p>
                     <Grid
                       container
-                      spacing={1.5}
+                      spacing={2}
                       sx={{ alignItems: "flex-start" }}
                     >
                       <Grid size={{ xs: 12, sm: 4 }}>
@@ -1366,9 +1591,7 @@ export default function VerificationModal({
                         />
                       </Grid>
                       <Grid size={{ xs: 12 }}>
-                        <Box
-                          sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}
-                        >
+                        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                           {VALIDITY_DATES.map((d) => {
                             const isoVal = toInputDate(d);
                             const isActive = watchedValidityDate === isoVal;
@@ -1380,13 +1603,23 @@ export default function VerificationModal({
                                 onClick={() => setValue("validityDate", isoVal)}
                                 sx={{
                                   fontWeight: 700,
-                                  fontSize: "0.72rem",
-                                  borderRadius: "6px",
-                                  height: 28,
+                                  fontSize: "0.75rem",
+                                  borderRadius: "8px",
+                                  height: 32,
                                   cursor: "pointer",
                                   ...(isActive
-                                    ? { bgcolor: "#2563EB", color: "white" }
-                                    : { bgcolor: "#F1F5F9", color: "#334155" }),
+                                    ? {
+                                        bgcolor: "#2563EB",
+                                        color: "white",
+                                        boxShadow:
+                                          "0 4px 10px rgba(37,99,235,0.2)",
+                                      }
+                                    : {
+                                        bgcolor: "#F1F5F9",
+                                        color: "#475569",
+                                        border: "1px solid #E2E8F0",
+                                      }),
+                                  transition: "all 0.2s",
                                   "&:hover": {
                                     bgcolor: isActive ? "#1D4ED8" : "#E2E8F0",
                                   },
@@ -1420,6 +1653,7 @@ export default function VerificationModal({
                   </Grid>
                 </Grid>
               </Box>
+
               {error && (
                 <Alert severity="error" sx={{ my: 2, borderRadius: "10px" }}>
                   {error}
@@ -1431,59 +1665,138 @@ export default function VerificationModal({
             <Grid
               size={{ xs: 12, md: 4 }}
               sx={{
-                p: { xs: 2, sm: 3 },
-                bgcolor: "#FAFBFC",
+                p: { xs: 3, sm: 4 },
+                bgcolor: "#F8FAFC",
                 display: "flex",
                 flexDirection: "column",
-                gap: 2,
+                gap: 3,
+                borderLeft: { md: "1px solid #E2E8F0" },
               }}
             >
-              <p style={{ ...sectionSx, margin: 0 }}>Collection Metrics</p>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  pb: 1,
+                  borderBottom: "1px solid #E2E8F0",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 4,
+                      height: 20,
+                      bgcolor: "#2563EB",
+                      borderRadius: 1,
+                    }}
+                  />
+                  <p
+                    style={{
+                      ...sectionSx,
+                      margin: 0,
+                      border: "none",
+                      flex: "none",
+                    }}
+                  >
+                    Collection Insights
+                  </p>
+                </Box>
+
+                <Tooltip title="Hold to view sensitive stats">
+                  <IconButton
+                    onMouseDown={() => setShowStats(true)}
+                    onMouseUp={() => setShowStats(false)}
+                    onMouseLeave={() => setShowStats(false)}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      setShowStats(true);
+                    }}
+                    onTouchEnd={() => setShowStats(false)}
+                    size="small"
+                    sx={{
+                      bgcolor: showStats ? "#2563EB" : "#F1F5F9",
+                      color: showStats ? "white" : "#64748B",
+                      "&:hover": { bgcolor: showStats ? "#1D4ED8" : "#E2E8F0" },
+                      transition: "all 0.2s",
+                      boxShadow: showStats
+                        ? "0 4px 10px rgba(37,99,235,0.3)"
+                        : "none",
+                    }}
+                  >
+                    {showStats ? (
+                      <VisibilityOutlined sx={{ fontSize: 18 }} />
+                    ) : (
+                      <VisibilityOffOutlined sx={{ fontSize: 18 }} />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </Box>
 
               {/* Account A */}
               <Box
                 sx={{
                   bgcolor: "white",
                   border: "1px solid #E2E8F0",
-                  borderRadius: "14px",
-                  p: 2,
+                  borderRadius: "20px",
+                  p: 3,
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
+                  transition: "transform 0.2s ease",
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: "0 10px 20px rgba(0,0,0,0.04)",
+                  },
                 }}
               >
                 <Box
                   sx={{
                     display: "flex",
                     justifyContent: "space-between",
-                    mb: 1,
+                    mb: 1.5,
                   }}
                 >
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "12px",
+                      bgcolor: "#EFF6FF",
+                      color: "#2563EB",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <AccountBalanceOutlined sx={{ fontSize: 22 }} />
+                  </Box>
                   <p
                     style={{
                       margin: 0,
-                      fontSize: "0.62rem",
-                      fontWeight: 700,
+                      fontSize: "0.65rem",
+                      fontWeight: 800,
                       color: "#94A3B8",
                       textTransform: "uppercase",
                       letterSpacing: "0.08em",
                     }}
                   >
-                    Account A (Bank)
+                    Account A
                   </p>
-                  <AccountBalanceOutlined
-                    sx={{ fontSize: 18, color: "#2563EB" }}
-                  />
                 </Box>
                 {statsLoading ? (
-                  <Skeleton width="60%" height={36} />
+                  <Skeleton width="80%" height={40} />
                 ) : (
                   <p
                     style={{
                       margin: 0,
-                      fontSize: "1.5rem",
-                      fontWeight: 800,
+                      fontSize: "1.75rem",
+                      fontWeight: 900,
                       color: "#0F172A",
+                      letterSpacing: "-0.01em",
                     }}
                   >
-                    {formatCurrency(paymentStats?.totalAccountA)}
+                    {showStats
+                      ? formatCurrency(paymentStats?.totalAccountA)
+                      : "₹ — — — —"}
                   </p>
                 )}
               </Box>
@@ -1493,45 +1806,65 @@ export default function VerificationModal({
                 sx={{
                   bgcolor: "white",
                   border: "1px solid #E2E8F0",
-                  borderRadius: "14px",
-                  p: 2,
+                  borderRadius: "20px",
+                  p: 3,
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
+                  transition: "transform 0.2s ease",
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: "0 10px 20px rgba(0,0,0,0.04)",
+                  },
                 }}
               >
                 <Box
                   sx={{
                     display: "flex",
                     justifyContent: "space-between",
-                    mb: 1,
+                    mb: 1.5,
                   }}
                 >
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "12px",
+                      bgcolor: "#F5F3FF",
+                      color: "#7C3AED",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <AccountBalanceWalletOutlined sx={{ fontSize: 22 }} />
+                  </Box>
                   <p
                     style={{
                       margin: 0,
-                      fontSize: "0.62rem",
-                      fontWeight: 700,
+                      fontSize: "0.65rem",
+                      fontWeight: 800,
                       color: "#94A3B8",
                       textTransform: "uppercase",
                       letterSpacing: "0.08em",
                     }}
                   >
-                    Account B (Bank)
+                    Account B
                   </p>
-                  <AccountBalanceWalletOutlined
-                    sx={{ fontSize: 18, color: "#7C3AED" }}
-                  />
                 </Box>
                 {statsLoading ? (
-                  <Skeleton width="60%" height={36} />
+                  <Skeleton width="80%" height={40} />
                 ) : (
                   <p
                     style={{
                       margin: 0,
-                      fontSize: "1.5rem",
-                      fontWeight: 800,
+                      fontSize: "1.75rem",
+                      fontWeight: 900,
                       color: "#0F172A",
+                      letterSpacing: "-0.01em",
                     }}
                   >
-                    {formatCurrency(paymentStats?.totalAccountB)}
+                    {showStats
+                      ? formatCurrency(paymentStats?.totalAccountB)
+                      : "₹ — — — —"}
                   </p>
                 )}
               </Box>
@@ -1541,22 +1874,42 @@ export default function VerificationModal({
                 sx={{
                   bgcolor: "white",
                   border: "1px solid #E2E8F0",
-                  borderRadius: "14px",
-                  p: 2,
+                  borderRadius: "20px",
+                  p: 3,
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
+                  transition: "transform 0.2s ease",
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: "0 10px 20px rgba(0,0,0,0.04)",
+                  },
                 }}
               >
                 <Box
                   sx={{
                     display: "flex",
                     justifyContent: "space-between",
-                    mb: 1,
+                    mb: 1.5,
                   }}
                 >
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "12px",
+                      bgcolor: "#ECFDF5",
+                      color: "#059669",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <AccountBalanceWalletOutlined sx={{ fontSize: 22 }} />
+                  </Box>
                   <p
                     style={{
                       margin: 0,
-                      fontSize: "0.62rem",
-                      fontWeight: 700,
+                      fontSize: "0.65rem",
+                      fontWeight: 800,
                       color: "#94A3B8",
                       textTransform: "uppercase",
                       letterSpacing: "0.08em",
@@ -1564,22 +1917,22 @@ export default function VerificationModal({
                   >
                     Cash Total
                   </p>
-                  <AccountBalanceWalletOutlined
-                    sx={{ fontSize: 18, color: "#059669" }}
-                  />
                 </Box>
                 {statsLoading ? (
-                  <Skeleton width="60%" height={36} />
+                  <Skeleton width="80%" height={40} />
                 ) : (
                   <p
                     style={{
                       margin: 0,
-                      fontSize: "1.5rem",
-                      fontWeight: 800,
+                      fontSize: "1.75rem",
+                      fontWeight: 900,
                       color: "#0F172A",
+                      letterSpacing: "-0.01em",
                     }}
                   >
-                    {formatCurrency(paymentStats?.totalCash)}
+                    {showStats
+                      ? formatCurrency(paymentStats?.totalCash)
+                      : "₹ — — — —"}
                   </p>
                 )}
               </Box>
@@ -1589,59 +1942,95 @@ export default function VerificationModal({
                 sx={{
                   background:
                     "linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)",
-                  borderRadius: "14px",
-                  p: 2.5,
+                  borderRadius: "24px",
+                  p: 3.5,
                   color: "white",
+                  boxShadow: "0 15px 35px rgba(37,99,235,0.25)",
+                  position: "relative",
+                  overflow: "hidden",
+                  "&::after": {
+                    content: '""',
+                    width: 100,
+                    height: 100,
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.1)",
+                  },
                 }}
               >
                 <p
                   style={{
-                    margin: "0 0 6px",
-                    fontSize: "0.62rem",
+                    margin: "0 0 8px",
+                    fontSize: "0.7rem",
                     fontWeight: 700,
                     textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                    opacity: 0.75,
+                    letterSpacing: "0.12em",
+                    opacity: 0.8,
                   }}
                 >
-                  Grand Total Collection
+                  Grand Total Revenue
                 </p>
                 {statsLoading ? (
                   <Skeleton
                     width="70%"
-                    height={42}
-                    sx={{ bgcolor: "rgba(255,255,255,0.2)" }}
+                    height={48}
+                    sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
                   />
                 ) : (
                   <>
                     <p
-                      style={{ margin: 0, fontSize: "1.8rem", fontWeight: 800 }}
+                      style={{
+                        margin: 0,
+                        fontSize: "2.2rem",
+                        fontWeight: 900,
+                        letterSpacing: "-0.02em",
+                      }}
                     >
-                      {formatCurrency(paymentStats?.grandTotal)}
+                      {showStats
+                        ? formatCurrency(paymentStats?.grandTotal)
+                        : "₹ — — — —"}
                     </p>
                     <Box
                       sx={{
                         display: "flex",
                         justifyContent: "space-between",
-                        mt: 1.5,
-                        pt: 1.5,
+                        mt: 2.5,
+                        pt: 2,
                         borderTop: "1px solid rgba(255,255,255,0.15)",
                       }}
                     >
-                      <p
-                        style={{ margin: 0, fontSize: "0.75rem", opacity: 0.8 }}
-                      >
-                        Total Verified
-                      </p>
+                      <Box>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: "0.65rem",
+                            opacity: 0.7,
+                            textTransform: "uppercase",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Students
+                        </p>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: "1rem",
+                            fontWeight: 800,
+                          }}
+                        >
+                          {paymentStats?.totalApproved || 0}
+                        </p>
+                      </Box>
                       <Chip
-                        label={`${paymentStats?.totalApproved || 0} verified`}
+                        label="Live Stats"
                         size="small"
                         sx={{
-                          bgcolor: "rgba(255,255,255,0.15)",
+                          bgcolor: "rgba(255,255,255,0.2)",
                           color: "white",
-                          fontWeight: 700,
-                          fontSize: "0.68rem",
-                          height: 22,
+                          fontWeight: 800,
+                          fontSize: "0.65rem",
+                          height: 24,
+                          borderRadius: "6px",
+                          border: "1px solid rgba(255,255,255,0.1)",
                         }}
                       />
                     </Box>
@@ -1665,7 +2054,7 @@ export default function VerificationModal({
           }}
         >
           <Button
-            onClick={handleReject}
+            onClick={openRejectDialog}
             disabled={rejecting || submitting}
             variant="outlined"
             color="error"
@@ -1679,7 +2068,7 @@ export default function VerificationModal({
             {rejecting ? (
               <CircularProgress size={20} color="error" />
             ) : (
-              "Reject Registration"
+              "Reject"
             )}
           </Button>
           <Button
@@ -1698,7 +2087,7 @@ export default function VerificationModal({
             {submitting ? (
               <CircularProgress size={20} sx={{ color: "white" }} />
             ) : (
-              "Approve & Generate Receipt"
+              "Approve"
             )}
           </Button>
         </DialogActions>
@@ -1714,6 +2103,105 @@ export default function VerificationModal({
         }}
         onComplete={handleCropComplete}
       />
+
+      {/* Reject Confirmation Dialog */}
+      <Dialog
+        open={rejectDialogOpen}
+        onClose={() => setRejectDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "16px",
+            p: 1,
+          },
+        }}
+      >
+        <DialogContent sx={{ textAlign: "center", pt: 4, pb: 3 }}>
+          <Box
+            sx={{
+              width: 64,
+              height: 64,
+              borderRadius: "50%",
+              bgcolor: "#FEF2F2",
+              color: "#EF4444",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px",
+            }}
+          >
+            <DoNotDisturbAltOutlined sx={{ fontSize: 32 }} />
+          </Box>
+          <h2
+            style={{
+              margin: "0 0 8px",
+              fontSize: "1.25rem",
+              fontWeight: 800,
+              color: "#0F172A",
+            }}
+          >
+            Reject Registration
+          </h2>
+          <p
+            style={{ margin: "0 0 24px", fontSize: "0.9rem", color: "#64748B" }}
+          >
+            Are you sure you want to reject <strong>{student?.fullName}</strong>
+            's registration? This will move them to the rejected archive.
+          </p>
+
+          <Box sx={{ textAlign: "left" }}>
+            <p style={labelSx}>Rejection Reason (Optional)</p>
+            <TextField
+              fullWidth
+              size="small"
+              multiline
+              rows={3}
+              placeholder="E.g., Invalid document, duplicate entry..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              sx={fieldSx}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0, justifyContent: "center", gap: 1 }}>
+          <Button
+            onClick={() => setRejectDialogOpen(false)}
+            variant="outlined"
+            disabled={rejecting}
+            sx={{
+              borderRadius: "10px",
+              textTransform: "none",
+              fontWeight: 700,
+              px: 3,
+              borderColor: "#E2E8F0",
+              color: "#64748B",
+              "&:hover": { bgcolor: "#F8FAFC", borderColor: "#CBD5E1" },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleReject}
+            variant="contained"
+            color="error"
+            disabled={rejecting}
+            sx={{
+              borderRadius: "10px",
+              textTransform: "none",
+              fontWeight: 700,
+              px: 3,
+              minWidth: 120,
+            }}
+          >
+            {rejecting ? (
+              <CircularProgress size={20} sx={{ color: "white" }} />
+            ) : (
+              "Confirm Reject"
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

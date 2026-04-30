@@ -99,7 +99,7 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
     transform: translate(-50%, -50%);
     width: 90mm;
     height: 90mm;
-    background-image: url('https://madhav-enterprise.vercel.app/images/logo1.svg');
+    background-image: url('/logo.svg');
     background-size: contain;
     background-repeat: no-repeat;
     opacity: 0.2;
@@ -427,7 +427,7 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
       <div class="header-center">
         <div class="receipt-title">RECEIPT</div>
         <div class="company-name">MADHAV ENTERPRISE</div>
-        <div class="company-contact">Mobile No.: 8347125664</div>
+        <div class="company-contact">Mobile No.: 9274170956, 9274170956, 9274170956</div>
       </div>
       <div class="header-right">
         <div class="sr-no">Sr. No. ${data.receiptNumber}</div>
@@ -437,7 +437,7 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
     <!-- Shift Bar -->
     <div class="shift-bar">
       <div>Shift: <span class="shift-label">${shiftLabel}</span></div>
-      <div style="font-size:8pt;color:#0F172A;">Academic Year 2025-2026</div>
+      <div style="font-size:8pt;color:#0F172A;">SIGMA UNIVERCITY</div>
     </div>
 
     <!-- Acknowledgement -->

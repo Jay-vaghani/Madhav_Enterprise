@@ -6,12 +6,14 @@ import {
   FormControl,
   InputLabel,
   CircularProgress,
+  Grid,
 } from "@mui/material";
 import {
   PersonAddAltOutlined,
   AccountBalanceWalletOutlined,
   CurrencyRupeeOutlined,
   TrendingUpOutlined,
+  PeopleAltOutlined,
 } from "@mui/icons-material";
 import {
   BarChart,
@@ -96,9 +98,7 @@ const ChartTooltip = ({ active, payload, label }) => {
         boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
       }}
     >
-      <p style={{ margin: 0, fontSize: "0.7rem", color: "#94A3B8" }}>
-        {label}
-      </p>
+      <p style={{ margin: 0, fontSize: "0.7rem", color: "#94A3B8" }}>{label}</p>
       <p style={{ margin: 0 }}>{payload[0].value} registrations</p>
     </Box>
   );
@@ -110,7 +110,7 @@ function StatCard({ icon: Icon, label, value, subtitle, accent, iconColor }) {
     <Box
       sx={{
         flex: 1,
-        minWidth: 180,
+        minWidth: { xs: 0, sm: 180 },
         bgcolor: accent ? "#2563EB" : "#FFFFFF",
         borderRadius: "14px",
         border: accent ? "none" : "1px solid #E2E8F0",
@@ -290,11 +290,12 @@ export default function ReportsPage() {
           display: "flex",
           flexWrap: "wrap",
           gap: 2,
-          mb: 3,
-          p: 2.5,
+          mb: 4,
+          p: 2,
           bgcolor: "#FFFFFF",
-          borderRadius: "14px",
+          borderRadius: "16px",
           border: "1px solid #E2E8F0",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
         }}
       >
         <FormControl size="small" sx={selectSx}>
@@ -350,45 +351,230 @@ export default function ReportsPage() {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            minHeight: 300,
+            minHeight: 400,
           }}
         >
-          <CircularProgress size={36} sx={{ color: "#2563EB" }} />
+          <CircularProgress size={40} thickness={4} sx={{ color: "#2563EB" }} />
         </Box>
       )}
 
       {!loading && stats && (
         <>
-          {/* Stat Cards */}
-          <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
-            <StatCard
-              icon={PersonAddAltOutlined}
-              label="Today's Registrations"
-              value={stats.todayRegistrations}
-              iconColor="#2563EB"
-            />
-            <StatCard
-              icon={AccountBalanceWalletOutlined}
-              label="Total Fees Collected"
-              value={fmtCurrency(stats.totalFeesCollected)}
-              subtitle={`Acc A: ${fmtCompact(stats.accountA)} | Acc B: ${fmtCompact(stats.accountB)}`}
-              iconColor="#059669"
-            />
-            <StatCard
-              icon={CurrencyRupeeOutlined}
-              label="Cash Collected"
-              value={fmtCurrency(stats.totalCash)}
-              subtitle={`${stats.totalApproved} total students`}
-              iconColor="#F59E0B"
-            />
-            <StatCard
-              icon={TrendingUpOutlined}
-              label="Net Revenue"
-              value={fmtCurrency(stats.netRevenue)}
-              subtitle={`Approved: ${stats.totalApproved}`}
-              accent
-              iconColor="#fff"
-            />
+          {/* ── Main Stats Dashboard ── */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {/* Small Metrics */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: { xs: "column", sm: "row" },
+                  gap: 2,
+                  height: "100%",
+                }}
+              >
+                <StatCard
+                  icon={PersonAddAltOutlined}
+                  label="Today's Enrollments"
+                  value={stats.todayRegistrations}
+                  subtitle="New student registrations today"
+                  iconColor="#2563EB"
+                />
+                <StatCard
+                  icon={CurrencyRupeeOutlined}
+                  label="Total Students"
+                  value={stats.totalApproved}
+                  subtitle="Active approved records"
+                  iconColor="#8B5CF6"
+                />
+              </Box>
+            </Grid>
+
+            {/* Hero Net Revenue Card */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box
+                sx={{
+                  height: "100%",
+                  background:
+                    "linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)",
+                  borderRadius: "20px",
+                  p: 3,
+                  color: "white",
+                  boxShadow: "0 10px 25px rgba(37,99,235,0.2)",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: -20,
+                    right: -20,
+                    width: 120,
+                    height: 120,
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.05)",
+                  }}
+                />
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    opacity: 0.8,
+                  }}
+                >
+                  Net Revenue (Total)
+                </p>
+                <p
+                  style={{
+                    margin: "4px 0",
+                    fontSize: "2.4rem",
+                    fontWeight: 900,
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {fmtCurrency(stats.netRevenue)}
+                </p>
+                <Box
+                  sx={{
+                    mt: 1.5,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <TrendingUpOutlined sx={{ fontSize: 16, opacity: 0.8 }} />
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "0.8rem",
+                      fontWeight: 500,
+                      opacity: 0.9,
+                    }}
+                  >
+                    Combined institutional collections
+                  </p>
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
+
+          {/* ── Collection Insights Breakdown ── */}
+          <Box sx={{ mb: 4 }}>
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}
+            >
+              <Box
+                sx={{
+                  width: 4,
+                  height: 18,
+                  bgcolor: "#2563EB",
+                  borderRadius: 1,
+                }}
+              />
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "0.95rem",
+                  fontWeight: 800,
+                  color: "#1E293B",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Collection Insights
+              </h3>
+            </Box>
+
+            <Grid container spacing={2}>
+              {[
+                {
+                  label: "Account A",
+                  val: stats.accountA,
+                  color: "#3B82F6",
+                  bg: "#EFF6FF",
+                  icon: AccountBalanceWalletOutlined,
+                },
+                {
+                  label: "Account B",
+                  val: stats.accountB,
+                  color: "#8B5CF6",
+                  bg: "#F5F3FF",
+                  icon: AccountBalanceWalletOutlined,
+                },
+                {
+                  label: "Cash Collection",
+                  val: stats.totalCash,
+                  color: "#10B981",
+                  bg: "#ECFDF5",
+                  icon: CurrencyRupeeOutlined,
+                },
+              ].map((item) => (
+                <Grid size={{ xs: 12, sm: 4 }} key={item.label}>
+                  <Box
+                    sx={{
+                      bgcolor: "#FFFFFF",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: "16px",
+                      p: 2.5,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        transform: "translateY(-2px)",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                        borderColor: item.color,
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: "12px",
+                        bgcolor: item.bg,
+                        color: item.color,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <item.icon sx={{ fontSize: 22 }} />
+                    </Box>
+                    <Box>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "0.65rem",
+                          fontWeight: 700,
+                          color: "#94A3B8",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                        }}
+                      >
+                        {item.label}
+                      </p>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "1.25rem",
+                          fontWeight: 800,
+                          color: "#1E293B",
+                        }}
+                      >
+                        {fmtCurrency(item.val)}
+                      </p>
+                    </Box>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
           </Box>
 
           {/* Chart Section */}
@@ -454,10 +640,8 @@ export default function ReportsPage() {
                       cursor: "pointer",
                       fontSize: "0.78rem",
                       fontWeight: period === p.value ? 700 : 500,
-                      color:
-                        period === p.value ? "#2563EB" : "#64748B",
-                      bgcolor:
-                        period === p.value ? "#fff" : "transparent",
+                      color: period === p.value ? "#2563EB" : "#64748B",
+                      bgcolor: period === p.value ? "#fff" : "transparent",
                       borderRadius: period === p.value ? "8px" : 0,
                       boxShadow:
                         period === p.value
@@ -536,11 +720,7 @@ export default function ReportsPage() {
                     {trends.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={
-                          entry.count === maxCount
-                            ? "#2563EB"
-                            : "#BFDBFE"
-                        }
+                        fill={entry.count === maxCount ? "#2563EB" : "#BFDBFE"}
                       />
                     ))}
                   </Bar>

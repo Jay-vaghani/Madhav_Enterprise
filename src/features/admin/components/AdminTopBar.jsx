@@ -11,11 +11,19 @@ import {
   SearchOutlined,
   NotificationsNoneOutlined,
   HelpOutlineOutlined,
+  LogoutOutlined,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminTopBar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/admin/login", { replace: true });
+  };
 
   const roleLabel = user?.role === "admin" ? "Super Administrator" : "Manager";
 
@@ -26,34 +34,12 @@ export default function AdminTopBar() {
         px: 3,
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent: "end",
         bgcolor: "#FFFFFF",
         borderBottom: "1px solid #E2E8F0",
         gap: 2,
       }}
     >
-      {/* Right section */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-        <IconButton size="small" sx={{ color: "#64748B" }}>
-          <Badge
-            variant="dot"
-            sx={{
-              "& .MuiBadge-badge": {
-                bgcolor: "#2563EB",
-                width: 8,
-                height: 8,
-                minWidth: 8,
-              },
-            }}
-          >
-            <NotificationsNoneOutlined sx={{ fontSize: 22 }} />
-          </Badge>
-        </IconButton>
-
-        <IconButton size="small" sx={{ color: "#64748B" }}>
-          <HelpOutlineOutlined sx={{ fontSize: 22 }} />
-        </IconButton>
-      </Box>
       {/* User profile */}
       <Box
         sx={{
@@ -65,7 +51,7 @@ export default function AdminTopBar() {
           borderLeft: "1px solid #E2E8F0",
         }}
       >
-        <Box sx={{ textAlign: "right" }}>
+        <Box sx={{ textAlign: "right", display: { xs: "none", sm: "block" } }}>
           <p
             style={{
               margin: 0,
@@ -74,7 +60,7 @@ export default function AdminTopBar() {
               color: "#0F172A",
             }}
           >
-            {user?.username || "Admin User"}
+            {user?.fullName || "Admin User"}
           </p>
           <p
             style={{
@@ -98,8 +84,21 @@ export default function AdminTopBar() {
             fontWeight: 700,
           }}
         >
-          {(user?.username || "A").charAt(0).toUpperCase()}
+          {(user?.fullName || "A").charAt(0).toUpperCase()}
         </Avatar>
+        <IconButton 
+          onClick={handleLogout}
+          size="small"
+          sx={{ 
+            color: "#EF4444",
+            bgcolor: "#FEF2F2",
+            "&:hover": { bgcolor: "#FEE2E2" },
+            borderRadius: "10px",
+            ml: 1
+          }}
+        >
+          <LogoutOutlined sx={{ fontSize: 18 }} />
+        </IconButton>
       </Box>
     </Box>
   );
