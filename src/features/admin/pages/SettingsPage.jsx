@@ -185,7 +185,7 @@ const SettingsPage = () => {
     
     // For department, find the shift object if defaultShift is a string
     if (type === "department" && item.defaultShift) {
-      const shiftObj = shifts.find(s => s.time === item.defaultShift || s.label === item.defaultShift);
+      const shiftObj = shifts.find(s => s.id === item.defaultShift || s.time === item.defaultShift || s.label === item.defaultShift);
       setFormData({ ...item, defaultShift: shiftObj || item.defaultShift });
     } else {
       setFormData({ ...item });
@@ -238,10 +238,10 @@ const SettingsPage = () => {
         id: dialogMode === "create" ? generateId(formData.label) : formData.id,
       };
 
-      // For department, convert defaultShift object to string
+      // For department, convert defaultShift object to shift ID string
       if (itemType === "department" && payload.defaultShift) {
         payload.defaultShift = typeof payload.defaultShift === 'object' 
-          ? (payload.defaultShift.time || payload.defaultShift.label)
+          ? (payload.defaultShift.id || payload.defaultShift.label)
           : payload.defaultShift;
       }
 
@@ -487,11 +487,14 @@ const SettingsPage = () => {
                     >
                       {dept.label}
                     </Typography>
-                    {dept.defaultShift && (
-                      <Typography variant="body2" color="text.secondary">
-                        Default: {dept.defaultShift}
-                      </Typography>
-                    )}
+                    {dept.defaultShift && (() => {
+                      const s = shifts.find(sh => sh.id === dept.defaultShift || sh.time === dept.defaultShift || sh.label === dept.defaultShift);
+                      return (
+                        <Typography variant="body2" color="text.secondary">
+                          Default: {s ? `${s.emoji || "🚌"} ${s.label}` : dept.defaultShift}
+                        </Typography>
+                      );
+                    })()}
                   </Box>
                 </Box>
 

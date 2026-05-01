@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
-  Dialog, DialogTitle, DialogContent, Box, Grid, TextField, Button, MenuItem, Autocomplete, Alert, CircularProgress, InputAdornment, IconButton
+  Dialog, DialogTitle, DialogContent, Box, Grid, TextField, Button, MenuItem, Autocomplete, Alert, CircularProgress, InputAdornment, IconButton,
+  Radio, RadioGroup, FormControlLabel
 } from "@mui/material";
 import { CloseOutlined, AccountBalanceWalletOutlined, AccountBalanceOutlined } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";
@@ -43,7 +44,7 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
   const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
     defaultValues: {
       studentName: "", mobileNumber: "", department: null, pickupPoint: null, tripType: "",
-      validFrom: "", validTo: "", paymentMethod: "cash", feeAmount: "", cashAmount: "", bankAmount: "",
+      validFrom: "", validTo: "", paymentMethod: "cash", settlementAccount: "A", feeAmount: "", cashAmount: "", bankAmount: "",
       transaction1: "", remarks: ""
     }
   });
@@ -61,6 +62,7 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
         validFrom: passData.validFrom ? new Date(passData.validFrom).toISOString().split("T")[0] : "",
         validTo: passData.validTo ? new Date(passData.validTo).toISOString().split("T")[0] : "",
         paymentMethod: passData.paymentMethod || "cash",
+        settlementAccount: passData.settlementAccount || "A",
         feeAmount: passData.feeAmount || "",
         cashAmount: passData.cashAmount || "",
         bankAmount: passData.bankAmount || "",
@@ -69,7 +71,7 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
       });
       setError("");
     }
-  }, [passData, open, reset]);
+  }, [passData, open, reset, departments, pickupPoints]);
 
   const watchedTripType = watch("tripType");
   const watchedPaymentMethod = watch("paymentMethod");
@@ -199,16 +201,36 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
             </Grid>
 
             {watchedPaymentMethod === "bank" && (
-              <Grid item xs={12} sm={4}>
-                <p style={labelSx}>Transaction ID *</p>
-                <Controller name="transaction1" control={control} rules={{ required: "Required" }} render={({ field }) => (
-                  <TextField {...field} size="small" type="tel" fullWidth error={!!errors.transaction1} helperText={errors.transaction1?.message} sx={fieldSx} />
-                )} />
-              </Grid>
+              <>
+                <Grid item xs={12} sm={4}>
+                  <p style={labelSx}>Settlement Account *</p>
+                  <Controller name="settlementAccount" control={control} rules={{ required: "Required" }} render={({ field }) => (
+                    <RadioGroup row {...field}>
+                      <FormControlLabel value="A" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "A" ? "#2563EB" : "#475569" }}>Account A</span>} />
+                      <FormControlLabel value="B" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "B" ? "#2563EB" : "#475569" }}>Account B</span>} />
+                    </RadioGroup>
+                  )} />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <p style={labelSx}>Transaction ID *</p>
+                  <Controller name="transaction1" control={control} rules={{ required: "Required" }} render={({ field }) => (
+                    <TextField {...field} size="small" type="tel" fullWidth error={!!errors.transaction1} helperText={errors.transaction1?.message} sx={fieldSx} />
+                  )} />
+                </Grid>
+              </>
             )}
 
             {watchedPaymentMethod === "both" && (
               <>
+                <Grid item xs={12} sm={4}>
+                  <p style={labelSx}>Settlement Account *</p>
+                  <Controller name="settlementAccount" control={control} rules={{ required: "Required" }} render={({ field }) => (
+                    <RadioGroup row {...field}>
+                      <FormControlLabel value="A" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "A" ? "#2563EB" : "#475569" }}>Account A</span>} />
+                      <FormControlLabel value="B" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "B" ? "#2563EB" : "#475569" }}>Account B</span>} />
+                    </RadioGroup>
+                  )} />
+                </Grid>
                 <Grid item xs={12} sm={4}>
                   <p style={labelSx}>Cash Amount *</p>
                   <Controller name="cashAmount" control={control} rules={{ required: "Required" }} render={({ field }) => (

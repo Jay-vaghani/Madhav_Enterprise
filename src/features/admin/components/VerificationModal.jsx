@@ -213,6 +213,7 @@ export default function VerificationModal({
   const [error, setError] = useState("");
   const [showTransaction2, setShowTransaction2] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const isResettingRef = useRef(false);
   
   // Dynamic data from API
   const [departments, setDepartments] = useState([]);
@@ -291,12 +292,18 @@ export default function VerificationModal({
     }
   }, [watchedYear, setValue]);
 
-  // Auto-set shift when department changes
+  // Auto-set shift when department changes (skip during form reset)
   useEffect(() => {
+    if (isResettingRef.current) return;
     if (watchedDepartment?.defaultShift) {
-      setValue("shift", watchedDepartment.defaultShift);
+      // Resolve defaultShift to a shift ID (could be stored as id, time, or label)
+      const ds = watchedDepartment.defaultShift;
+      const matchedShift = shifts.find(
+        (s) => s.id === ds || s.time === ds || s.label === ds
+      );
+      setValue("shift", matchedShift ? matchedShift.id : ds);
     }
-  }, [watchedDepartment, setValue]);
+  }, [watchedDepartment, shifts, setValue]);
 
   // Auto-set fee when pickup point changes
   useEffect(() => {
@@ -305,10 +312,10 @@ export default function VerificationModal({
     }
   }, [watchedPickupPoint, setValue]);
 
-  // Reset form when student changes
+  // Reset form when student changes or when dynamic data finishes loading
   useEffect(() => {
     if (student) {
-      // Find matching department/pickupPoint objects from data
+      // Find matching department/pickupPoint objects from loaded data
       const deptObj =
         departments.find((d) => d.id === student.department?.id) ||
         student.department ||
@@ -318,6 +325,8 @@ export default function VerificationModal({
         student.pickupPoint ||
         null;
 
+      // Guard: prevent auto-set shift effect from overriding student's actual shift
+      isResettingRef.current = true;
       reset({
         fullName: student.fullName || "",
         email: student.email || "",
@@ -341,12 +350,14 @@ export default function VerificationModal({
         validityDate: "",
         remarks: "",
       });
+      // Allow auto-set effects to work normally after reset completes
+      requestAnimationFrame(() => { isResettingRef.current = false; });
       setPhotoPreview(student.photoUrl || null);
       setNewPhotoBase64(null);
       setShowTransaction2(false);
       setError("");
     }
-  }, [student, reset]);
+  }, [student, reset, departments, pickupPoints]);
 
   // Fetch payment stats when modal opens
   useEffect(() => {

@@ -13,6 +13,9 @@ import {
   Divider,
   Typography,
   Fade,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
 } from "@mui/material";
 import {
   AccountBalanceWalletOutlined,
@@ -144,6 +147,7 @@ export default function GeneratePassTab() {
       validFrom: "",
       validTo: "",
       paymentMethod: "cash",
+      settlementAccount: "A",
       feeAmount: "",
       cashAmount: "",
       bankAmount: "",
@@ -582,27 +586,125 @@ export default function GeneratePassTab() {
               </Grid>
 
               {watchedPaymentMethod === "bank" && (
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <p style={labelSx}>Transaction ID *</p>
-                  <Controller
-                    name="transaction1"
-                    control={control}
-                    rules={{ required: "Required" }}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        placeholder="UTR / Ref Number"
-                        fullWidth
-                        sx={fieldSx}
-                      />
-                    )}
-                  />
-                </Grid>
+                <>
+                  <Grid size={{ xs: 12, md: 3 }}>
+                    <p style={labelSx}>Settlement Account *</p>
+                    <Controller
+                      name="settlementAccount"
+                      control={control}
+                      rules={{ required: "Required" }}
+                      render={({ field }) => (
+                        <RadioGroup row {...field}>
+                          <FormControlLabel
+                            value="A"
+                            control={<Radio size="small" />}
+                            label={
+                              <span
+                                style={{
+                                  fontSize: "0.9rem",
+                                  fontWeight: 600,
+                                  color:
+                                    field.value === "A"
+                                      ? "#2563EB"
+                                      : "#475569",
+                                }}
+                              >
+                                Account A
+                              </span>
+                            }
+                          />
+                          <FormControlLabel
+                            value="B"
+                            control={<Radio size="small" />}
+                            label={
+                              <span
+                                style={{
+                                  fontSize: "0.9rem",
+                                  fontWeight: 600,
+                                  color:
+                                    field.value === "B"
+                                      ? "#2563EB"
+                                      : "#475569",
+                                }}
+                              >
+                                Account B
+                              </span>
+                            }
+                          />
+                        </RadioGroup>
+                      )}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 3 }}>
+                    <p style={labelSx}>Transaction ID *</p>
+                    <Controller
+                      name="transaction1"
+                      control={control}
+                      rules={{ required: "Required" }}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          placeholder="UTR / Ref Number"
+                          fullWidth
+                          sx={fieldSx}
+                        />
+                      )}
+                    />
+                  </Grid>
+                </>
               )}
 
               {watchedPaymentMethod === "both" && (
                 <>
-                  <Grid size={{ xs: 12, md: 2 }}>
+                  <Grid size={{ xs: 12, md: 3 }}>
+                    <p style={labelSx}>Settlement Account *</p>
+                    <Controller
+                      name="settlementAccount"
+                      control={control}
+                      rules={{ required: "Required" }}
+                      render={({ field }) => (
+                        <RadioGroup row {...field}>
+                          <FormControlLabel
+                            value="A"
+                            control={<Radio size="small" />}
+                            label={
+                              <span
+                                style={{
+                                  fontSize: "0.9rem",
+                                  fontWeight: 600,
+                                  color:
+                                    field.value === "A"
+                                      ? "#2563EB"
+                                      : "#475569",
+                                }}
+                              >
+                                Account A
+                              </span>
+                            }
+                          />
+                          <FormControlLabel
+                            value="B"
+                            control={<Radio size="small" />}
+                            label={
+                              <span
+                                style={{
+                                  fontSize: "0.9rem",
+                                  fontWeight: 600,
+                                  color:
+                                    field.value === "B"
+                                      ? "#2563EB"
+                                      : "#475569",
+                                }}
+                              >
+                                Account B
+                              </span>
+                            }
+                          />
+                        </RadioGroup>
+                      )}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 3 }}>
                     <p style={labelSx}>Cash</p>
                     <Controller
                       name="cashAmount"
@@ -617,7 +719,7 @@ export default function GeneratePassTab() {
                       )}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 2 }}>
+                  <Grid size={{ xs: 12, md: 3 }}>
                     <p style={labelSx}>Bank (Auto)</p>
                     <Controller
                       name="bankAmount"
@@ -633,7 +735,7 @@ export default function GeneratePassTab() {
                       )}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 2 }}>
+                  <Grid size={{ xs: 12, md: 3 }}>
                     <p style={labelSx}>Transaction ID *</p>
                     <Controller
                       name="transaction1"

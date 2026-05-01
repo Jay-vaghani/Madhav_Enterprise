@@ -49,9 +49,9 @@ export default function IdentityVerificationStep() {
   useEffect(() => {
     if (watchedYear) {
       const yearData = YEARS.find((y) => y.value === watchedYear);
-      if (yearData) setValue("semester", yearData.autoSemester);
+      if (yearData) setValue("semester", yearData.autoSemester, { shouldDirty: true, shouldValidate: true });
     } else {
-      setValue("semester", "");
+      setValue("semester", "", { shouldDirty: true });
     }
   }, [watchedYear, setValue]);
 
@@ -290,7 +290,14 @@ export default function IdentityVerificationStep() {
                       onChange={(_, selected) => {
                         field.onChange(selected);
                         if (selected?.defaultShift) {
-                          setValue("shift", selected.defaultShift);
+                          // Resolve defaultShift to a shift ID
+                          // It could be stored as shift.id, shift.time, or shift.label
+                          const ds = selected.defaultShift;
+                          const matchedShift = shifts.find(
+                            (s) => s.id === ds || s.time === ds || s.label === ds
+                          );
+                          const resolvedShiftId = matchedShift ? matchedShift.id : ds;
+                          setValue("shift", resolvedShiftId, { shouldDirty: true, shouldValidate: true });
                         }
                       }}
                       onBlur={field.onBlur}

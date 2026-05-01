@@ -1,4 +1,3 @@
-// export const API_BASE_URL = "http://0.0.0.0:3000/api";
 export const API_BASE_URL =
   "https://dqe8dosrs7.execute-api.ap-south-1.amazonaws.com/api";
 export const handleApiError = (error) => {
