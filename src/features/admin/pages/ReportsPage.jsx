@@ -494,14 +494,14 @@ export default function ReportsPage() {
             <Grid container spacing={2}>
               {[
                 {
-                  label: "Account A",
+                  label: "Account C",
                   val: stats.accountA,
                   color: "#3B82F6",
                   bg: "#EFF6FF",
                   icon: AccountBalanceWalletOutlined,
                 },
                 {
-                  label: "Account B",
+                  label: "Account H",
                   val: stats.accountB,
                   color: "#8B5CF6",
                   bg: "#F5F3FF",

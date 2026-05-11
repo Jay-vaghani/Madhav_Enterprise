@@ -147,7 +147,7 @@ export default function GeneratePassTab() {
       validFrom: "",
       validTo: "",
       paymentMethod: "cash",
-      settlementAccount: "A",
+      settlementAccount: "C",
       feeAmount: "",
       cashAmount: "",
       bankAmount: "",
@@ -596,7 +596,7 @@ export default function GeneratePassTab() {
                       render={({ field }) => (
                         <RadioGroup row {...field}>
                           <FormControlLabel
-                            value="A"
+                            value="C"
                             control={<Radio size="small" />}
                             label={
                               <span
@@ -604,17 +604,17 @@ export default function GeneratePassTab() {
                                   fontSize: "0.9rem",
                                   fontWeight: 600,
                                   color:
-                                    field.value === "A"
+                                    field.value === "C"
                                       ? "#2563EB"
                                       : "#475569",
                                 }}
                               >
-                                Account A
+                                Account C
                               </span>
                             }
                           />
                           <FormControlLabel
-                            value="B"
+                            value="H"
                             control={<Radio size="small" />}
                             label={
                               <span
@@ -622,12 +622,12 @@ export default function GeneratePassTab() {
                                   fontSize: "0.9rem",
                                   fontWeight: 600,
                                   color:
-                                    field.value === "B"
+                                    field.value === "H"
                                       ? "#2563EB"
                                       : "#475569",
                                 }}
                               >
-                                Account B
+                                Account H
                               </span>
                             }
                           />
@@ -665,7 +665,7 @@ export default function GeneratePassTab() {
                       render={({ field }) => (
                         <RadioGroup row {...field}>
                           <FormControlLabel
-                            value="A"
+                            value="C"
                             control={<Radio size="small" />}
                             label={
                               <span
@@ -673,17 +673,17 @@ export default function GeneratePassTab() {
                                   fontSize: "0.9rem",
                                   fontWeight: 600,
                                   color:
-                                    field.value === "A"
+                                    field.value === "C"
                                       ? "#2563EB"
                                       : "#475569",
                                 }}
                               >
-                                Account A
+                                Account C
                               </span>
                             }
                           />
                           <FormControlLabel
-                            value="B"
+                            value="H"
                             control={<Radio size="small" />}
                             label={
                               <span
@@ -691,12 +691,12 @@ export default function GeneratePassTab() {
                                   fontSize: "0.9rem",
                                   fontWeight: 600,
                                   color:
-                                    field.value === "B"
+                                    field.value === "H"
                                       ? "#2563EB"
                                       : "#475569",
                                 }}
                               >
-                                Account B
+                                Account H
                               </span>
                             }
                           />

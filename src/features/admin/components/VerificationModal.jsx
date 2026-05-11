@@ -103,13 +103,13 @@ async function compressToWebpUnder50KB(base64Input, maxKB = 50) {
 
 // ── Quick-select validity dates ────────────────────────────────
 const VALIDITY_DATES = [
-  "30/04/2026",
-  "30/06/2026",
-  "31/07/2026",
-  "31/08/2026",
-  "30/09/2026",
-  "31/10/2026",
-  "31/12/2026",
+  "30/04/2027",
+  "30/06/2027",
+  "31/07/2027",
+  "31/08/2027",
+  "30/09/2027",
+  "31/10/2027",
+  "31/12/2027",
 ];
 
 // Convert DD/MM/YYYY to YYYY-MM-DD for input[type=date]
@@ -214,16 +214,36 @@ export default function VerificationModal({
   const [showTransaction2, setShowTransaction2] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const isResettingRef = useRef(false);
-  
+
   // Dynamic data from API
   const [departments, setDepartments] = useState([]);
   const [pickupPoints, setPickupPoints] = useState([]);
   const [shifts, setShifts] = useState([]);
   const YEARS = [
-    { value: "1", label: "First Year", autoSemester: "Semester 1-2", semesters: [{ value: "Semester 1-2", label: "Semester 1 - 2" }] },
-    { value: "2", label: "Second Year", autoSemester: "Semester 3-4", semesters: [{ value: "Semester 3-4", label: "Semester 3 - 4" }] },
-    { value: "3", label: "Third Year", autoSemester: "Semester 5-6", semesters: [{ value: "Semester 5-6", label: "Semester 5 - 6" }] },
-    { value: "4", label: "Fourth Year", autoSemester: "Semester 7-8", semesters: [{ value: "Semester 7-8", label: "Semester 7 - 8" }] },
+    {
+      value: "1",
+      label: "First Year",
+      autoSemester: "Semester 1-2",
+      semesters: [{ value: "Semester 1-2", label: "Semester 1 - 2" }],
+    },
+    {
+      value: "2",
+      label: "Second Year",
+      autoSemester: "Semester 3-4",
+      semesters: [{ value: "Semester 3-4", label: "Semester 3 - 4" }],
+    },
+    {
+      value: "3",
+      label: "Third Year",
+      autoSemester: "Semester 5-6",
+      semesters: [{ value: "Semester 5-6", label: "Semester 5 - 6" }],
+    },
+    {
+      value: "4",
+      label: "Fourth Year",
+      autoSemester: "Semester 7-8",
+      semesters: [{ value: "Semester 7-8", label: "Semester 7 - 8" }],
+    },
   ];
 
   // Fetch dynamic data
@@ -267,7 +287,7 @@ export default function VerificationModal({
       shift: "",
       pickupPoint: null,
       paymentMode: "cash",
-      settlementAccount: "A",
+      settlementAccount: "C",
       transaction1: "",
       transaction2: "",
       feeAmount: "",
@@ -299,7 +319,7 @@ export default function VerificationModal({
       // Resolve defaultShift to a shift ID (could be stored as id, time, or label)
       const ds = watchedDepartment.defaultShift;
       const matchedShift = shifts.find(
-        (s) => s.id === ds || s.time === ds || s.label === ds
+        (s) => s.id === ds || s.time === ds || s.label === ds,
       );
       setValue("shift", matchedShift ? matchedShift.id : ds);
     }
@@ -341,7 +361,7 @@ export default function VerificationModal({
         shift: student.shift || "",
         pickupPoint: ppObj,
         paymentMode: "cash",
-        settlementAccount: "A",
+        settlementAccount: "C",
         transaction1: "",
         transaction2: "",
         feeAmount: ppObj?.fee || "",
@@ -351,7 +371,9 @@ export default function VerificationModal({
         remarks: "",
       });
       // Allow auto-set effects to work normally after reset completes
-      requestAnimationFrame(() => { isResettingRef.current = false; });
+      requestAnimationFrame(() => {
+        isResettingRef.current = false;
+      });
       setPhotoPreview(student.photoUrl || null);
       setNewPhotoBase64(null);
       setShowTransaction2(false);
@@ -1244,7 +1266,7 @@ export default function VerificationModal({
                         render={({ field }) => (
                           <RadioGroup row {...field}>
                             <FormControlLabel
-                              value="A"
+                              value="C"
                               control={<Radio size="small" />}
                               label={
                                 <span
@@ -1252,17 +1274,17 @@ export default function VerificationModal({
                                     fontSize: "0.88rem",
                                     fontWeight: 600,
                                     color:
-                                      field.value === "A"
+                                      field.value === "C"
                                         ? "#2563EB"
                                         : "#475569",
                                   }}
                                 >
-                                  Account A
+                                  Account C
                                 </span>
                               }
                             />
                             <FormControlLabel
-                              value="B"
+                              value="H"
                               control={<Radio size="small" />}
                               label={
                                 <span
@@ -1270,12 +1292,12 @@ export default function VerificationModal({
                                     fontSize: "0.88rem",
                                     fontWeight: 600,
                                     color:
-                                      field.value === "B"
+                                      field.value === "H"
                                         ? "#2563EB"
                                         : "#475569",
                                   }}
                                 >
-                                  Account B
+                                  Account H
                                 </span>
                               }
                             />
@@ -1744,7 +1766,7 @@ export default function VerificationModal({
                 </Tooltip>
               </Box>
 
-              {/* Account A */}
+              {/* Account C */}
               <Box
                 sx={{
                   bgcolor: "white",
@@ -1790,7 +1812,7 @@ export default function VerificationModal({
                       letterSpacing: "0.08em",
                     }}
                   >
-                    Account A
+                    Account C
                   </p>
                 </Box>
                 {statsLoading ? (
@@ -1812,7 +1834,7 @@ export default function VerificationModal({
                 )}
               </Box>
 
-              {/* Account B */}
+              {/* Account H */}
               <Box
                 sx={{
                   bgcolor: "white",
@@ -1858,7 +1880,7 @@ export default function VerificationModal({
                       letterSpacing: "0.08em",
                     }}
                   >
-                    Account B
+                    Account H
                   </p>
                 </Box>
                 {statsLoading ? (

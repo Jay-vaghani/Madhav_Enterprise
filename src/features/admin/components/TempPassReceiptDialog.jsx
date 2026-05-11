@@ -53,7 +53,7 @@ export default function TempPassReceiptDialog({ open, receiptData, onClose }) {
   }
   .receipt-page::before {
     content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 90mm; height: 90mm; background-image: url('https://ik.imagekit.io/JayVaghani2002/Royal-Travels-Logo.jpg');
+    width: 90mm; height: 90mm; background-image: url('https://ik.imagekit.io/JayVaghani2002/Madhav.svg?updatedAt=1764781255491');
     background-size: contain; background-repeat: no-repeat; opacity: 0.15; z-index: 0;
   }
   .receipt-inner { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; }
@@ -163,29 +163,96 @@ export default function TempPassReceiptDialog({ open, receiptData, onClose }) {
   if (!receiptData) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: "16px" } }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 3, py: 2, borderBottom: "1px solid #E2E8F0", bgcolor: "#FAFBFC" }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{ sx: { borderRadius: "16px" } }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          px: 3,
+          py: 2,
+          borderBottom: "1px solid #E2E8F0",
+          bgcolor: "#FAFBFC",
+        }}
+      >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <Box sx={{ width: 36, height: 36, borderRadius: "10px", bgcolor: "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Box
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: "10px",
+              bgcolor: "#ECFDF5",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <span style={{ fontSize: "1.2rem" }}>✓</span>
           </Box>
           <Box>
-            <p style={{ margin: 0, fontWeight: 800, fontSize: "1rem", color: "#0F172A" }}>Pass Generated</p>
-            <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748B" }}>{receiptData.receiptNumber} — {receiptData.studentName}</p>
+            <p
+              style={{
+                margin: 0,
+                fontWeight: 800,
+                fontSize: "1rem",
+                color: "#0F172A",
+              }}
+            >
+              Pass Generated
+            </p>
+            <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748B" }}>
+              {receiptData.receiptNumber} — {receiptData.studentName}
+            </p>
           </Box>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
-          <Button variant="contained" startIcon={<PrintOutlined />} onClick={handlePrint} sx={{ borderRadius: "10px", textTransform: "none", fontWeight: 700, bgcolor: "#2563EB", "&:hover": { bgcolor: "#1D4ED8" } }}>
+          <Button
+            variant="contained"
+            startIcon={<PrintOutlined />}
+            onClick={handlePrint}
+            sx={{
+              borderRadius: "10px",
+              textTransform: "none",
+              fontWeight: 700,
+              bgcolor: "#2563EB",
+              "&:hover": { bgcolor: "#1D4ED8" },
+            }}
+          >
             Print Pass
           </Button>
-          <IconButton onClick={onClose} size="small"><CloseOutlined /></IconButton>
+          <IconButton onClick={onClose} size="small">
+            <CloseOutlined />
+          </IconButton>
         </Box>
       </Box>
       <DialogContent sx={{ p: 3, bgcolor: "#F1F5F9" }}>
-        <Box sx={{ p: 3, bgcolor: "white", borderRadius: "12px", border: "1px solid #E2E8F0", textAlign: "center" }}>
-          <p style={{ fontWeight: 800, fontSize: "1.2rem", margin: "0 0 10px" }}>{receiptData.tripType}</p>
-          <p style={{ color: "#64748B", margin: "0 0 10px" }}>Valid: {fmtDate(receiptData.validFrom)} to {fmtDate(receiptData.validTo)}</p>
-          <p style={{ fontWeight: 600, margin: 0 }}>Fee Paid: {fmtCurrency(receiptData.feeAmount)}</p>
+        <Box
+          sx={{
+            p: 3,
+            bgcolor: "white",
+            borderRadius: "12px",
+            border: "1px solid #E2E8F0",
+            textAlign: "center",
+          }}
+        >
+          <p
+            style={{ fontWeight: 800, fontSize: "1.2rem", margin: "0 0 10px" }}
+          >
+            {receiptData.tripType}
+          </p>
+          <p style={{ color: "#64748B", margin: "0 0 10px" }}>
+            Valid: {fmtDate(receiptData.validFrom)} to{" "}
+            {fmtDate(receiptData.validTo)}
+          </p>
+          <p style={{ fontWeight: 600, margin: 0 }}>
+            Fee Paid: {fmtCurrency(receiptData.feeAmount)}
+          </p>
         </Box>
       </DialogContent>
     </Dialog>

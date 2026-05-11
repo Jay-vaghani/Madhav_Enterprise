@@ -114,8 +114,8 @@ const getRefundSplit = (refundAmount, payment, refundMode = "proportional") => {
 
 const acctStyle = (a) =>
   ({
-    A: { bg: "#EFF6FF", color: "#2563EB", label: "Account A" },
-    B: { bg: "#FDF4FF", color: "#9333EA", label: "Account B" },
+    C: { bg: "#EFF6FF", color: "#2563EB", label: "Account C" },
+    H: { bg: "#FDF4FF", color: "#9333EA", label: "Account H" },
   })[a] || { bg: "#F1F5F9", color: "#475569", label: "Cash" };
 
 const fieldSx = {
@@ -416,12 +416,12 @@ export default function CancellationPage() {
             color="#0F172A"
           />
           <StatBlock
-            label="Account A Refund"
+            label="Account C Refund"
             value={stats.accountARefund}
             color="#2563EB"
           />
           <StatBlock
-            label="Account B Refund"
+            label="Account H Refund"
             value={stats.accountBRefund}
             color="#9333EA"
           />
@@ -1058,7 +1058,7 @@ export default function CancellationPage() {
                           <span
                             style={{ fontSize: "0.75rem", color: "#475569" }}
                           >
-                            Account A:{" "}
+                            Account C:{" "}
                             <strong>{fmtCurrency(c.refundAccountA)}</strong>
                           </span>
                         </Box>
@@ -1082,7 +1082,7 @@ export default function CancellationPage() {
                           <span
                             style={{ fontSize: "0.75rem", color: "#475569" }}
                           >
-                            Account B:{" "}
+                            Account H:{" "}
                             <strong>{fmtCurrency(c.refundAccountB)}</strong>
                           </span>
                         </Box>

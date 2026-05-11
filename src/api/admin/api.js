@@ -274,6 +274,7 @@ export const fetchApprovedStudents = async (token, filters = {}) => {
   if (filters.shift) params.set("shift", filters.shift);
   if (filters.department) params.set("department", filters.department);
   if (filters.route) params.set("route", filters.route);
+  if (filters.validityDateTo) params.set("validityDateTo", filters.validityDateTo);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.limit) params.set("limit", String(filters.limit));
 

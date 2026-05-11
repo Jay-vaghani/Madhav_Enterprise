@@ -103,7 +103,6 @@ export default function ApprovedStudentsPage() {
   const [shift, setShift]       = useState("");
   const [department, setDept]   = useState("");
   const [route, setRoute]       = useState("");
-  const [validityDateFrom, setValidityDateFrom] = useState("");
   const [validityDateTo, setValidityDateTo]     = useState("");
   const [appliedFilters, setAppliedFilters] = useState({});
 
@@ -147,8 +146,8 @@ export default function ApprovedStudentsPage() {
 
   useEffect(() => { loadStudents(1); }, [loadStudents]);
 
-  const handleApply = () => setAppliedFilters({ year, shift, department, route, validityDateFrom, validityDateTo });
-  const handleReset = () => { setYear(""); setShift(""); setDept(""); setRoute(""); setValidityDateFrom(""); setValidityDateTo(""); setAppliedFilters({}); };
+  const handleApply = () => setAppliedFilters({ year, shift, department, route, validityDateTo });
+  const handleReset = () => { setYear(""); setShift(""); setDept(""); setRoute(""); setValidityDateTo(""); setAppliedFilters({}); };
   const handleLoadMore = () => loadStudents(page + 1, true);
 
   const handleReprint = async (student) => {
@@ -225,20 +224,7 @@ export default function ApprovedStudentsPage() {
           <Grid size={{ xs: 12, sm: 3, md: 3}}>
             <FormControl size="small" fullWidth sx={selectSx}><InputLabel>Shift</InputLabel><Select value={shift} label="Shift" onChange={(e) => setShift(e.target.value)}><MenuItem value="">All</MenuItem>{["7:30", "9:30", "10:30"].map((s) => (<MenuItem key={s} value={s}>{s}</MenuItem>))}</Select></FormControl>
           </Grid>
-          <Grid size={{ xs: 12, sm: 3, md: 3}}>
-            <FormControl size="small" fullWidth sx={selectSx}>
-              <InputLabel shrink>Validity From</InputLabel>
-              <TextField
-                size="small"
-                type="date"
-                value={validityDateFrom}
-                onChange={(e) => setValidityDateFrom(e.target.value)}
-                sx={{ "& .MuiOutlinedInput-root": { height: 40, borderRadius: "10px", mt: 1 } }}
-                InputLabelProps={{ shrink: true }}
-              />
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 3, md: 2.5, lg: 2 }}>
+          <Grid size={{ xs: 12, sm: 3, md: 3 }}>
             <FormControl size="small" fullWidth sx={selectSx}>
               <InputLabel shrink>Validity To</InputLabel>
               <TextField

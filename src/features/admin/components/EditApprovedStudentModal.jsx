@@ -94,13 +94,13 @@ async function compressToWebpUnder50KB(base64Input, maxKB = 50) {
 }
 
 const VALIDITY_DATES = [
-  "30/04/2026",
-  "30/06/2026",
-  "31/07/2026",
-  "31/08/2026",
-  "30/09/2026",
-  "31/10/2026",
-  "31/12/2026",
+  "30/04/2027",
+  "30/06/2027",
+  "31/07/2027",
+  "31/08/2027",
+  "30/09/2027",
+  "31/10/2027",
+  "31/12/2027",
 ];
 const toInputDate = (ddmmyyyy) => {
   const [d, m, y] = ddmmyyyy.split("/");
@@ -198,16 +198,36 @@ export default function EditApprovedStudentModal({
   const [error, setError] = useState("");
   const [showTransaction2, setShowTransaction2] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  
+
   // Dynamic data from API
   const [departments, setDepartments] = useState([]);
   const [pickupPoints, setPickupPoints] = useState([]);
   const [shifts, setShifts] = useState([]);
   const YEARS = [
-    { value: "1", label: "First Year", autoSemester: "Semester 1-2", semesters: [{ value: "Semester 1-2", label: "Semester 1 - 2" }] },
-    { value: "2", label: "Second Year", autoSemester: "Semester 3-4", semesters: [{ value: "Semester 3-4", label: "Semester 3 - 4" }] },
-    { value: "3", label: "Third Year", autoSemester: "Semester 5-6", semesters: [{ value: "Semester 5-6", label: "Semester 5 - 6" }] },
-    { value: "4", label: "Fourth Year", autoSemester: "Semester 7-8", semesters: [{ value: "Semester 7-8", label: "Semester 7 - 8" }] },
+    {
+      value: "1",
+      label: "First Year",
+      autoSemester: "Semester 1-2",
+      semesters: [{ value: "Semester 1-2", label: "Semester 1 - 2" }],
+    },
+    {
+      value: "2",
+      label: "Second Year",
+      autoSemester: "Semester 3-4",
+      semesters: [{ value: "Semester 3-4", label: "Semester 3 - 4" }],
+    },
+    {
+      value: "3",
+      label: "Third Year",
+      autoSemester: "Semester 5-6",
+      semesters: [{ value: "Semester 5-6", label: "Semester 5 - 6" }],
+    },
+    {
+      value: "4",
+      label: "Fourth Year",
+      autoSemester: "Semester 7-8",
+      semesters: [{ value: "Semester 7-8", label: "Semester 7 - 8" }],
+    },
   ];
 
   // Fetch dynamic data
@@ -251,7 +271,7 @@ export default function EditApprovedStudentModal({
       shift: "",
       pickupPoint: null,
       paymentMode: "cash",
-      settlementAccount: "A",
+      settlementAccount: "C",
       transaction1: "",
       transaction2: "",
       feeAmount: "",
@@ -324,7 +344,7 @@ export default function EditApprovedStudentModal({
       shift: student.shift || "",
       pickupPoint: ppObj,
       paymentMode: pmt?.paymentMethod || "cash",
-      settlementAccount: pmt?.settlementAccount || "A",
+      settlementAccount: pmt?.settlementAccount || "C",
       transaction1: pmt?.transaction1 || "",
       transaction2: pmt?.transaction2 || "",
       feeAmount: pmt?.amount ?? ppObj?.fee ?? "",
@@ -1137,7 +1157,7 @@ export default function EditApprovedStudentModal({
                             sx={{ height: 36, alignItems: "center" }}
                           >
                             <FormControlLabel
-                              value="A"
+                              value="C"
                               control={<Radio size="small" />}
                               label={
                                 <span
@@ -1146,13 +1166,13 @@ export default function EditApprovedStudentModal({
                                     fontWeight: 700,
                                   }}
                                 >
-                                  Account A
+                                  Account C
                                 </span>
                               }
                               sx={{ mr: 2 }}
                             />
                             <FormControlLabel
-                              value="B"
+                              value="H"
                               control={<Radio size="small" />}
                               label={
                                 <span
@@ -1161,7 +1181,7 @@ export default function EditApprovedStudentModal({
                                     fontWeight: 700,
                                   }}
                                 >
-                                  Account B
+                                  Account H
                                 </span>
                               }
                             />
@@ -1603,7 +1623,7 @@ export default function EditApprovedStudentModal({
                 </Tooltip>
               </Box>
 
-              {/* Account A */}
+              {/* Account C */}
               <Box sx={premiumCardSx}>
                 <Box
                   sx={{
@@ -1636,7 +1656,7 @@ export default function EditApprovedStudentModal({
                       letterSpacing: "0.08em",
                     }}
                   >
-                    Account A
+                    Account C
                   </p>
                 </Box>
                 {statsLoading ? (
@@ -1658,7 +1678,7 @@ export default function EditApprovedStudentModal({
                 )}
               </Box>
 
-              {/* Account B */}
+              {/* Account H */}
               <Box sx={premiumCardSx}>
                 <Box
                   sx={{
@@ -1691,7 +1711,7 @@ export default function EditApprovedStudentModal({
                       letterSpacing: "0.08em",
                     }}
                   >
-                    Account B
+                    Account H
                   </p>
                 </Box>
                 {statsLoading ? (

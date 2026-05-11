@@ -44,7 +44,7 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
   const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
     defaultValues: {
       studentName: "", mobileNumber: "", department: null, pickupPoint: null, tripType: "",
-      validFrom: "", validTo: "", paymentMethod: "cash", settlementAccount: "A", feeAmount: "", cashAmount: "", bankAmount: "",
+      validFrom: "", validTo: "", paymentMethod: "cash", settlementAccount: "C", feeAmount: "", cashAmount: "", bankAmount: "",
       transaction1: "", remarks: ""
     }
   });
@@ -62,7 +62,7 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
         validFrom: passData.validFrom ? new Date(passData.validFrom).toISOString().split("T")[0] : "",
         validTo: passData.validTo ? new Date(passData.validTo).toISOString().split("T")[0] : "",
         paymentMethod: passData.paymentMethod || "cash",
-        settlementAccount: passData.settlementAccount || "A",
+        settlementAccount: passData.settlementAccount || "C",
         feeAmount: passData.feeAmount || "",
         cashAmount: passData.cashAmount || "",
         bankAmount: passData.bankAmount || "",
@@ -206,8 +206,8 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
                   <p style={labelSx}>Settlement Account *</p>
                   <Controller name="settlementAccount" control={control} rules={{ required: "Required" }} render={({ field }) => (
                     <RadioGroup row {...field}>
-                      <FormControlLabel value="A" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "A" ? "#2563EB" : "#475569" }}>Account A</span>} />
-                      <FormControlLabel value="B" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "B" ? "#2563EB" : "#475569" }}>Account B</span>} />
+                      <FormControlLabel value="C" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "C" ? "#2563EB" : "#475569" }}>Account C</span>} />
+                      <FormControlLabel value="H" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "H" ? "#2563EB" : "#475569" }}>Account H</span>} />
                     </RadioGroup>
                   )} />
                 </Grid>
@@ -226,8 +226,8 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
                   <p style={labelSx}>Settlement Account *</p>
                   <Controller name="settlementAccount" control={control} rules={{ required: "Required" }} render={({ field }) => (
                     <RadioGroup row {...field}>
-                      <FormControlLabel value="A" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "A" ? "#2563EB" : "#475569" }}>Account A</span>} />
-                      <FormControlLabel value="B" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "B" ? "#2563EB" : "#475569" }}>Account B</span>} />
+                      <FormControlLabel value="C" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "C" ? "#2563EB" : "#475569" }}>Account C</span>} />
+                      <FormControlLabel value="H" control={<Radio size="small" />} label={<span style={{ fontSize: "0.88rem", fontWeight: 600, color: field.value === "H" ? "#2563EB" : "#475569" }}>Account H</span>} />
                     </RadioGroup>
                   )} />
                 </Grid>
