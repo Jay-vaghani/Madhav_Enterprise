@@ -13,6 +13,9 @@ import {
   DoNotDisturbAltOutlined,
   ConfirmationNumberOutlined,
   ManageAccountsOutlined,
+  DirectionsBusOutlined,
+  LocalGasStationOutlined,
+  PersonOutlined,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -52,6 +55,25 @@ const NAV_ITEMS = [
     id: "cancellation",
     label: "Cancellation & Refund",
     icon: MoneyOffOutlined,
+    active: false,
+  },
+  {
+    id: "buses",
+    label: "Bus Management",
+    icon: DirectionsBusOutlined,
+    active: false,
+    adminOnly: true,
+  },
+  {
+    id: "fuel",
+    label: "Fuel Management",
+    icon: LocalGasStationOutlined,
+    active: false,
+  },
+  {
+    id: "drivers",
+    label: "Driver Management",
+    icon: PersonOutlined,
     active: false,
   },
 

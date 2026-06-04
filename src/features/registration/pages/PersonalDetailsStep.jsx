@@ -23,11 +23,24 @@ const TRUST_ITEMS = [
   },
 ];
 
+/**
+ * Derives a combined full name from first, middle, and last name parts.
+ * Trims each part and joins non‑empty values with a single space.
+ */
+const deriveFullName = (firstName, middleName, lastName) =>
+  [firstName, middleName, lastName]
+    .map((s) => (s || "").trim())
+    .filter(Boolean)
+    .join(" ");
+
 export default function PersonalDetailsStep() {
   const { formData, updateFormData } = useRegistration();
 
-  const { control, watch } = useForm({
+  const { control, watch, setValue } = useForm({
     defaultValues: {
+      firstName: formData.firstName || "",
+      middleName: formData.middleName || "",
+      lastName: formData.lastName || "",
       fullName: formData.fullName,
       email: formData.email,
       mobile: formData.mobile,
@@ -42,6 +55,16 @@ export default function PersonalDetailsStep() {
     const { unsubscribe } = watch((value) => updateFormData(value));
     return unsubscribe;
   }, [watch, updateFormData]);
+
+  // Derive fullName from the three separate name fields
+  const firstName = watch("firstName");
+  const middleName = watch("middleName");
+  const lastName = watch("lastName");
+
+  useEffect(() => {
+    const full = deriveFullName(firstName, middleName, lastName);
+    setValue("fullName", full, { shouldValidate: false });
+  }, [firstName, middleName, lastName, setValue]);
 
   const fieldSx = {
     "& .MuiOutlinedInput-root": { height: 52, borderRadius: "10px" },
@@ -112,24 +135,75 @@ export default function PersonalDetailsStep() {
       >
         <CardContent sx={{ p: { xs: 2, lg: 3.5 } }}>
           <Grid container spacing={2.5}>
-            {/* Full Name (as per Aadhaar) */}
-            <Grid size={{ xs: 12 }}>
+            {/* First Name */}
+            <Grid size={{ xs: 12, lg: 4 }}>
               <Controller
-                name="fullName"
+                name="firstName"
                 control={control}
-                rules={{ required: "Full name is required" }}
+                rules={{ required: "First name is required" }}
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
-                    label="Full Name (as per Aadhaar card)"
-                    placeholder="Enter your full name exactly as on Aadhaar"
+                    label="First Name (as per Aadhaar)"
+                    placeholder="Enter first name"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                     fullWidth
                     sx={fieldSx}
                     slotProps={{
                       htmlInput: {
-                        autoComplete: "name",
+                        autoComplete: "given-name",
+                        inputMode: "text",
+                      },
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Middle Name */}
+            <Grid size={{ xs: 12, lg: 4 }}>
+              <Controller
+                name="middleName"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    label="Middle Name (optional)"
+                    placeholder="Enter middle name"
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                    fullWidth
+                    sx={fieldSx}
+                    slotProps={{
+                      htmlInput: {
+                        autoComplete: "additional-name",
+                        inputMode: "text",
+                      },
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Last Name */}
+            <Grid size={{ xs: 12, lg: 4 }}>
+              <Controller
+                name="lastName"
+                control={control}
+                rules={{ required: "Last name is required" }}
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    label="Last Name (as per Aadhaar)"
+                    placeholder="Enter last name"
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                    fullWidth
+                    sx={fieldSx}
+                    slotProps={{
+                      htmlInput: {
+                        autoComplete: "family-name",
                         inputMode: "text",
                       },
                     }}

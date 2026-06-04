@@ -15,6 +15,9 @@ import {
   MoneyOffOutlined,
   DoNotDisturbAltOutlined,
   ConfirmationNumberOutlined,
+  DirectionsBusOutlined,
+  LocalGasStationOutlined,
+  PersonOutlined,
 } from "@mui/icons-material";
 import { theme } from "../../../theme/theme";
 import AdminSidebar from "../components/AdminSidebar";
@@ -27,6 +30,9 @@ import CancellationPage from "../pages/CancellationPage";
 import TemporaryPassesPage from "../pages/TemporaryPassesPage";
 
 import SettingsPage from "../pages/SettingsPage";
+import BusManagementPage from "../../fleet/pages/BusManagementPage";
+import FuelManagementPage from "../../fleet/pages/FuelManagementPage";
+import DriverManagementPage from "../../fleet/pages/DriverManagementPage";
 
 const NAV_ITEMS = [
   { id: "pending", label: "Pending", icon: <PendingActionsOutlined /> },
@@ -34,6 +40,9 @@ const NAV_ITEMS = [
   { id: "rejected", label: "Rejected", icon: <DoNotDisturbAltOutlined /> },
   { id: "temporary_passes", label: "Passes", icon: <ConfirmationNumberOutlined /> },
   { id: "cancellation", label: "Refund", icon: <MoneyOffOutlined /> },
+  { id: "buses", label: "Buses", icon: <DirectionsBusOutlined /> },
+  { id: "fuel", label: "Fuel", icon: <LocalGasStationOutlined /> },
+  { id: "drivers", label: "Drivers", icon: <PersonOutlined /> },
   { id: "reports", label: "Reports", icon: <BarChartOutlined /> },
 ];
 
@@ -56,6 +65,12 @@ export default function DashboardLayout() {
         return <TemporaryPassesPage />;
       case "settings":
         return <SettingsPage />;
+      case "buses":
+        return <BusManagementPage />;
+      case "fuel":
+        return <FuelManagementPage />;
+      case "drivers":
+        return <DriverManagementPage />;
       default:
         return <PendingStudentsPage />;
     }

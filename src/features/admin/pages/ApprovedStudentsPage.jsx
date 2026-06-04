@@ -22,14 +22,22 @@ import {
   RestartAltOutlined,
   EditOutlined,
 } from "@mui/icons-material";
-import * as XLSX from "xlsx";
-import { fetchApprovedStudents, fetchReceiptForReprint } from "../../../api/admin/api";
+import XLSX from "xlsx-js-style";
+import {
+  fetchApprovedStudents,
+  fetchReceiptForReprint,
+} from "../../../api/admin/api";
 import { useAuth } from "../context/AuthContext";
 import ReceiptDialog from "../components/ReceiptDialog";
 import EditApprovedStudentModal from "../components/EditApprovedStudentModal";
 
 // ── Helpers ──────────────────────────────────────────────────────
-const YEAR_LABEL = { "1": "1st Year", "2": "2nd Year", "3": "3rd Year", "4": "4th Year" };
+const YEAR_LABEL = {
+  1: "1st Year",
+  2: "2nd Year",
+  3: "3rd Year",
+  4: "4th Year",
+};
 const PAGE_LIMIT = 50;
 
 const fmtDate = (d) => {
@@ -37,8 +45,6 @@ const fmtDate = (d) => {
   const dt = new Date(d);
   return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
 };
-
-const fmtCurrency = (n) => (n != null ? `₹${Number(n).toLocaleString("en-IN")}` : "—");
 
 // ── Filter Select Styling ─────────────────────────────────────────
 const selectSx = {
@@ -76,11 +82,30 @@ const colHdr = (label) => (
   </p>
 );
 
-// ── Shift chip colours ────────────────────────────────────────────
+// ── Shift format helper (handles "1st"/"2nd"/"3rd", "7:30"/"9:30"/"10:30", and "2nd-shift" style values) ──
+const SHIFT_FORMAT_MAP = {
+  "1st": "1st (07:30 AM)",
+  "2nd": "2nd (09:30 AM)",
+  "3rd": "3rd (11:30 AM)",
+  "7:30": "1st (07:30 AM)",
+  "9:30": "2nd (09:30 AM)",
+  "10:30": "3rd (10:30 AM)",
+};
+const formatShift = (shift) => {
+  if (!shift) return "";
+  // Exact match first
+  if (SHIFT_FORMAT_MAP[shift]) return SHIFT_FORMAT_MAP[shift];
+  // Partial match (e.g. "2nd-shift", "3rd shift")
+  const s = String(shift).toLowerCase();
+  if (s.includes("1st") || s.includes("7:30")) return "1st (07:30 AM)";
+  if (s.includes("2nd") || s.includes("9:30")) return "2nd (09:30 AM)";
+  if (s.includes("3rd") || s.includes("10:30")) return "3rd (11:30 AM)";
+  return shift;
+};
 const shiftChipSx = (shift) => {
   const map = {
-    "7:30":  { bgcolor: "#EFF6FF", color: "#2563EB" },
-    "9:30":  { bgcolor: "#F0FDF4", color: "#15803D" },
+    "7:30": { bgcolor: "#EFF6FF", color: "#2563EB" },
+    "9:30": { bgcolor: "#F0FDF4", color: "#15803D" },
     "10:30": { bgcolor: "#FFF7ED", color: "#C2410C" },
   };
   const style = map[shift] || { bgcolor: "#F1F5F9", color: "#475569" };
@@ -99,31 +124,38 @@ export default function ApprovedStudentsPage() {
   const { token } = useAuth();
 
   // ── Filter state ──────────────────────────────────────────────
-  const [year, setYear]         = useState("");
-  const [shift, setShift]       = useState("");
-  const [department, setDept]   = useState("");
-  const [route, setRoute]       = useState("");
-  const [validityDateTo, setValidityDateTo]     = useState("");
+  const [year, setYear] = useState("");
+  const [shift, setShift] = useState("");
+  const [department, setDept] = useState("");
+  const [route, setRoute] = useState("");
+  const [settlement, setSettlement] = useState("");
+  const [validityDateTo, setValidityDateTo] = useState("");
+  const [searchName, setSearchName] = useState("");
+  const [searchReceipt, setSearchReceipt] = useState("");
   const [appliedFilters, setAppliedFilters] = useState({});
 
   // ── Data state ────────────────────────────────────────────────
   const [students, setStudents] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage]         = useState(1);
-  const [hasMore, setHasMore]   = useState(false);
-  const [loading, setLoading]   = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError]       = useState("");
+  const [error, setError] = useState("");
 
   // ── Dynamic filter options ────────────────────────────────────
-  const allDepts  = [...new Set(students.map((s) => s.department?.label).filter(Boolean))].sort();
-  const allRoutes = [...new Set(students.map((s) => s.pickupPoint?.label).filter(Boolean))].sort();
+  const allDepts = [
+    ...new Set(students.map((s) => s.department?.label).filter(Boolean)),
+  ].sort();
+  const allRoutes = [
+    ...new Set(students.map((s) => s.pickupPoint?.label).filter(Boolean)),
+  ].sort();
 
   // ── Modals ────────────────────────────────────────────────────
-  const [receiptOpen, setReceiptOpen]   = useState(false);
-  const [receiptData, setReceiptData]   = useState(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
   const [reprintLoading, setReprintLoading] = useState(null);
-  const [editOpen, setEditOpen]     = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [editStudent, setEditStudent] = useState(null);
 
   const loadStudents = useCallback(
@@ -131,52 +163,243 @@ export default function ApprovedStudentsPage() {
       if (!token) return;
       append ? setLoadingMore(true) : setLoading(true);
       try {
-        const res = await fetchApprovedStudents(token, { ...appliedFilters, page: pg, limit: PAGE_LIMIT });
+        const res = await fetchApprovedStudents(token, {
+          ...appliedFilters,
+          page: pg,
+          limit: PAGE_LIMIT,
+        });
         if (res.success) {
           setStudents((prev) => (append ? [...prev, ...res.data] : res.data));
           setTotalCount(res.totalCount);
           setHasMore(pg * PAGE_LIMIT < res.totalCount);
           setPage(pg);
         }
-      } catch (err) { setError(err.message || "Failed to load students"); }
-      finally { append ? setLoadingMore(false) : setLoading(false); }
+      } catch (err) {
+        setError(err.message || "Failed to load students");
+      } finally {
+        append ? setLoadingMore(false) : setLoading(false);
+      }
     },
-    [token, appliedFilters]
+    [token, appliedFilters],
   );
 
-  useEffect(() => { loadStudents(1); }, [loadStudents]);
+  useEffect(() => {
+    loadStudents(1);
+  }, [loadStudents]);
 
-  const handleApply = () => setAppliedFilters({ year, shift, department, route, validityDateTo });
-  const handleReset = () => { setYear(""); setShift(""); setDept(""); setRoute(""); setValidityDateTo(""); setAppliedFilters({}); };
+  const handleApply = () =>
+    setAppliedFilters({ year, shift, department, route, settlement, validityDateTo, searchName, searchReceipt });
+  const handleReset = () => {
+    setYear("");
+    setShift("");
+    setDept("");
+    setRoute("");
+    setSettlement("");
+    setValidityDateTo("");
+    setSearchName("");
+    setSearchReceipt("");
+    setAppliedFilters({});
+  };
   const handleLoadMore = () => loadStudents(page + 1, true);
 
   const handleReprint = async (student) => {
     setReprintLoading(student.receiptNumber);
     try {
       const res = await fetchReceiptForReprint(token, student.receiptNumber);
-      if (res.success && res.receiptData) { setReceiptData(res.receiptData); setReceiptOpen(true); }
-    } catch (err) { alert("Could not load receipt: " + err.message); }
-    finally { setReprintLoading(null); }
+      if (res.success && res.receiptData) {
+        setReceiptData(res.receiptData);
+        setReceiptOpen(true);
+      }
+    } catch (err) {
+      alert("Could not load receipt: " + err.message);
+    } finally {
+      setReprintLoading(null);
+    }
   };
 
-  const handleEdit = (student) => { setEditStudent(student); setEditOpen(true); };
+  const handleEdit = (student) => {
+    setEditStudent(student);
+    setEditOpen(true);
+  };
   const handleEditSaved = (updated) => {
-    setEditOpen(false); setEditStudent(null);
-    setStudents((prev) => prev.map((s) => s._id === updated._id ? { ...s, ...updated, payment: s.payment } : s));
+    setEditOpen(false);
+    setEditStudent(null);
+    setStudents((prev) =>
+      prev.map((s) =>
+        s._id === updated._id ? { ...s, ...updated, payment: s.payment } : s,
+      ),
+    );
   };
 
   const handleExport = () => {
     if (!students.length) return;
-    const sorted = [...students].sort((a, b) => (a.receiptNumber || "").localeCompare(b.receiptNumber || "", undefined, { numeric: true }));
-    const rows = sorted.map((s) => ({
-      "Receipt No": s.receiptNumber, "Full Name": s.fullName, "Mobile": s.mobile, "Year": YEAR_LABEL[s.year] || s.year,
-      "Department": s.department?.label, "Shift": s.shift, "Pickup Point": s.pickupPoint?.label, "Enrollment No": s.enrollmentNumber,
-      "Payment Mode": s.payment?.paymentMethod, "Total Fee (₹)": s.payment?.amount, "Approved On": fmtDate(s.approvedAt)
-    }));
+
+    // Sort by receipt number
+    const sorted = [...students].sort((a, b) =>
+      (a.receiptNumber || "").localeCompare(b.receiptNumber || "", undefined, {
+        numeric: true,
+      }),
+    );
+
+    // ── Build rows ─────────────────────────────────────────────
+    const rows = sorted.map((s) => {
+      const p = s.payment || {};
+      const pm = p.paymentMethod;
+
+      // Cash & Bank amounts
+      const cashAmt = pm === "cash" || pm === "both" ? p.cashAmount || p.amount || 0 : "";
+      const bankAmt = pm === "bank" || pm === "both" ? p.bankAmount || p.amount || 0 : "";
+
+      // Transaction IDs
+      const txns = [p.transaction1, p.transaction2].filter(Boolean).join(" || ");
+
+      // Account label
+      let accountLabel = "";
+      if (pm === "cash") {
+        accountLabel = "Cash";
+      } else if (pm === "bank") {
+        accountLabel = p.settlementAccount === "C" ? "Account C" : "Account H";
+      } else if (pm === "both") {
+        const acc = p.settlementAccount === "C" ? "Account C" : "Account H";
+        accountLabel = `${acc}, Cash`;
+      }
+
+      return {
+        "Date of Approval": fmtDate(s.approvedAt),
+        "Receipt No.": s.receiptNumber,
+        "Full Name": s.fullName,
+        Year: YEAR_LABEL[s.year] || s.year,
+        Department: s.department?.label || "",
+        Semester: s.semester || "",
+        Shift: formatShift(s.shift),
+        "Pickup Point": s.pickupPoint?.label || "",
+        "Total Fees": p.amount || "",
+        "CASH": cashAmt,
+        "BANK": bankAmt,
+        "Payment Mode": pm ? pm.charAt(0).toUpperCase() + pm.slice(1) : "",
+        "Transaction IDs": txns,
+        "Validity Date": fmtDate(s.validityDate),
+        "Parents Phone": s.guardianMobile || "",
+        "Student Phone": s.mobile || "",
+        "ImageUrl": s.photoUrl || "",
+        "Enrollment Number": s.enrollmentNumber || "",
+        Account: accountLabel,
+      };
+    });
+
+    // ── Sheet Setup ────────────────────────────────────────────
     const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Column order must match the header keys above
+    const headers = Object.keys(rows[0]);
+
+    // ── Theme colours ──────────────────────────────────────────
+    const BLUE = "2563EB";
+    const WHITE = "FFFFFF";
+    const BORDER_COLOR = "E2E8F0";
+    const STRIPE = "F8FAFC";
+    const DARK_TEXT = "0F172A";
+
+    // ── Header style ───────────────────────────────────────────
+    const headerStyle = {
+      font: { name: "Calibri", sz: 11, bold: true, color: { rgb: WHITE } },
+      fill: { fgColor: { rgb: BLUE }, patternType: "solid" },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border: {
+        top: { style: "thin", color: { rgb: BLUE } },
+        bottom: { style: "thin", color: { rgb: BLUE } },
+        left: { style: "thin", color: { rgb: BLUE } },
+        right: { style: "thin", color: { rgb: BLUE } },
+      },
+    };
+
+    // ── Data row styles ────────────────────────────────────────
+    const dataStyleEven = {
+      font: { name: "Calibri", sz: 10, color: { rgb: DARK_TEXT } },
+      fill: { fgColor: { rgb: WHITE }, patternType: "solid" },
+      alignment: { vertical: "center", wrapText: false },
+      border: {
+        top: { style: "thin", color: { rgb: BORDER_COLOR } },
+        bottom: { style: "thin", color: { rgb: BORDER_COLOR } },
+        left: { style: "thin", color: { rgb: BORDER_COLOR } },
+        right: { style: "thin", color: { rgb: BORDER_COLOR } },
+      },
+    };
+
+    const dataStyleOdd = {
+      ...dataStyleEven,
+      fill: { fgColor: { rgb: STRIPE }, patternType: "solid" },
+    };
+
+    // Number format for currency columns
+    const currencyStyle = {
+      font: { name: "Calibri", sz: 10, color: { rgb: DARK_TEXT } },
+      alignment: { horizontal: "right", vertical: "center" },
+      numFmt: "#,##0",
+    };
+
+    // ── Apply styles to header row (row 0) ─────────────────────
+    for (let c = 0; c < headers.length; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c });
+      if (ws[cellRef]) {
+        ws[cellRef].s = headerStyle;
+      }
+    }
+
+    // ── Apply styles to data rows ──────────────────────────────
+    const currencyCols = ["Total Fees", "CASH", "BANK"];
+
+    for (let r = 1; r <= rows.length; r++) {
+      const isOdd = r % 2 === 1;
+      const baseStyle = isOdd ? dataStyleOdd : dataStyleEven;
+
+      for (let c = 0; c < headers.length; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        if (ws[cellRef]) {
+          const hdr = headers[c];
+          if (currencyCols.includes(hdr)) {
+            ws[cellRef].s = { ...baseStyle, ...currencyStyle };
+          } else {
+            ws[cellRef].s = baseStyle;
+          }
+        }
+      }
+    }
+
+    // ── Column widths ──────────────────────────────────────────
+    ws["!cols"] = headers.map((h) => {
+      if (h === "ImageUrl") return { wch: 45 };
+      if (h === "Transaction IDs") return { wch: 28 };
+      if (h === "Full Name" || h === "Pickup Point") return { wch: 22 };
+      if (h === "Department") return { wch: 18 };
+      if (h === "Parents Phone" || h === "Student Phone") return { wch: 15 };
+      if (h === "Date of Approval" || h === "Validity Date") return { wch: 14 };
+      if (h === "Receipt No." || h === "Enrollment Number") return { wch: 14 };
+      if (h === "Account") return { wch: 18 };
+      if (currencyCols.includes(h)) return { wch: 12 };
+      return { wch: 13 };
+    });
+
+    // ── Header row height ──────────────────────────────────────
+    ws["!rows"] = [{ hpx: 32 }];
+    for (let r = 1; r <= rows.length; r++) {
+      ws["!rows"].push({ hpx: 22 });
+    }
+
+    // ── Freeze top row ─────────────────────────────────────────
+    ws["!freeze"] = { xSplit: 0, ySplit: 1, topLeftCell: "A2", activePane: "bottomLeft" };
+
+    // ── Auto-filter ────────────────────────────────────────────
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    ws["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
+
+    // ── Build & Download ───────────────────────────────────────
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Approved Students");
-    XLSX.writeFile(wb, `approved_students_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.writeFile(
+      wb,
+      `Approved_Students_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
   };
 
   // ── Desktop Grid Shared Logic ─────────────────────────────────
@@ -184,7 +407,8 @@ export default function ApprovedStudentsPage() {
     display: { xs: "none", md: "grid" },
     // We use px for columns that shouldn't grow, and fr for those that should.
     // minmax(0, Xfr) is CRITICAL to prevent content from expanding the column.
-    gridTemplateColumns: "minmax(0, 2.5fr) minmax(0, 1.4fr) minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.3fr) 100px",
+    gridTemplateColumns:
+      "minmax(0, 2.5fr) minmax(0, 1.4fr) minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.3fr) 100px",
     gap: 2,
     alignItems: "center",
     px: 3,
@@ -193,36 +417,183 @@ export default function ApprovedStudentsPage() {
   return (
     <Box sx={{ maxWidth: 1250 }}>
       {/* Header Section */}
-      <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 2 }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 2,
+        }}
+      >
         <Box>
-          <h1 style={{ margin: 0, fontSize: "1.55rem", fontWeight: 800, color: "#0F172A" }}>Approved Students</h1>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "1.55rem",
+              fontWeight: 800,
+              color: "#0F172A",
+            }}
+          >
+            Approved Students
+          </h1>
           <Chip
             label={`${totalCount} STUDENTS APPROVED`}
             size="small"
             icon={<PeopleAltOutlined style={{ fontSize: 13 }} />}
-            sx={{ mt: 0.8, height: 22, fontSize: "0.68rem", fontWeight: 700, bgcolor: "#EFF6FF", color: "#2563EB" }}
+            sx={{
+              mt: 0.8,
+              height: 22,
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              bgcolor: "#EFF6FF",
+              color: "#2563EB",
+            }}
           />
         </Box>
-        <Box onClick={handleExport} sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 1, borderRadius: "10px", border: "1.5px solid #E2E8F0", bgcolor: "#fff", cursor: "pointer", transition: "all 0.15s ease", "&:hover": { bgcolor: "#F8FAFC" } }}>
+        <Box
+          onClick={handleExport}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            px: 2,
+            py: 1,
+            borderRadius: "10px",
+            border: "1.5px solid #E2E8F0",
+            bgcolor: "#fff",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+            "&:hover": { bgcolor: "#F8FAFC" },
+          }}
+        >
           <DownloadOutlined sx={{ fontSize: 18, color: "#334155" }} />
-          <p style={{ margin: 0, fontSize: "0.83rem", fontWeight: 600, color: "#334155" }}>Export</p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "0.83rem",
+              fontWeight: 600,
+              color: "#334155",
+            }}
+          >
+            Export
+          </p>
         </Box>
       </Box>
 
       {/* Filter Bar */}
-      <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: "1px solid #E2E8F0", p: 2, mb: 3 }}>
+      <Box
+        sx={{
+          bgcolor: "#fff",
+          borderRadius: "14px",
+          border: "1px solid #E2E8F0",
+          p: 2,
+          mb: 3,
+        }}
+      >
         <Grid container spacing={2} alignItems="flex-end">
-          <Grid size={{ xs: 12, sm: 6, md: 3}}>
-            <FormControl size="small" fullWidth sx={selectSx}><InputLabel>Department</InputLabel><Select value={department} label="Department" onChange={(e) => setDept(e.target.value)}><MenuItem value="">All</MenuItem>{allDepts.map((d) => (<MenuItem key={d} value={d}>{d}</MenuItem>))}</Select></FormControl>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <TextField
+              size="small"
+              fullWidth
+              label="Search Name"
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              sx={selectSx}
+            />
           </Grid>
-          <Grid size={{ xs: 12, sm: 3, md: 3}}>
-            <FormControl size="small" fullWidth sx={selectSx}><InputLabel>Year</InputLabel><Select value={year} label="Year" onChange={(e) => setYear(e.target.value)}><MenuItem value="">All</MenuItem>{["1", "2", "3", "4"].map((y) => (<MenuItem key={y} value={y}>{YEAR_LABEL[y]}</MenuItem>))}</Select></FormControl>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <TextField
+              size="small"
+              fullWidth
+              label="Receipt No"
+              value={searchReceipt}
+              onChange={(e) => setSearchReceipt(e.target.value)}
+              sx={selectSx}
+            />
           </Grid>
-          <Grid size={{ xs: 12, sm: 3, md: 3}}>
-            <FormControl size="small" fullWidth sx={selectSx}><InputLabel>Route</InputLabel><Select value={route} label="Route" onChange={(e) => setRoute(e.target.value)}><MenuItem value="">All</MenuItem>{allRoutes.map((r) => (<MenuItem key={r} value={r}>{r}</MenuItem>))}</Select></FormControl>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <FormControl size="small" fullWidth sx={selectSx}>
+              <InputLabel>Department</InputLabel>
+              <Select
+                value={department}
+                label="Department"
+                onChange={(e) => setDept(e.target.value)}
+              >
+                <MenuItem value="">All</MenuItem>
+                {allDepts.map((d) => (
+                  <MenuItem key={d} value={d}>
+                    {d}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, sm: 3, md: 3}}>
-            <FormControl size="small" fullWidth sx={selectSx}><InputLabel>Shift</InputLabel><Select value={shift} label="Shift" onChange={(e) => setShift(e.target.value)}><MenuItem value="">All</MenuItem>{["7:30", "9:30", "10:30"].map((s) => (<MenuItem key={s} value={s}>{s}</MenuItem>))}</Select></FormControl>
+          <Grid size={{ xs: 12, sm: 3, md: 3 }}>
+            <FormControl size="small" fullWidth sx={selectSx}>
+              <InputLabel>Year</InputLabel>
+              <Select
+                value={year}
+                label="Year"
+                onChange={(e) => setYear(e.target.value)}
+              >
+                <MenuItem value="">All</MenuItem>
+                {["1", "2", "3", "4"].map((y) => (
+                  <MenuItem key={y} value={y}>
+                    {YEAR_LABEL[y]}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 3, md: 3 }}>
+            <FormControl size="small" fullWidth sx={selectSx}>
+              <InputLabel>Account</InputLabel>
+              <Select
+                value={settlement}
+                label="Account"
+                onChange={(e) => setSettlement(e.target.value)}
+              >
+                <MenuItem value="">All</MenuItem>
+                <MenuItem value="C">Account C</MenuItem>
+                <MenuItem value="H">Account H</MenuItem>
+                <MenuItem value="cash">Cash</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 3, md: 3 }}>
+            <FormControl size="small" fullWidth sx={selectSx}>
+              <InputLabel>Route</InputLabel>
+              <Select
+                value={route}
+                label="Route"
+                onChange={(e) => setRoute(e.target.value)}
+              >
+                <MenuItem value="">All</MenuItem>
+                {allRoutes.map((r) => (
+                  <MenuItem key={r} value={r}>
+                    {r}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 3, md: 3 }}>
+            <FormControl size="small" fullWidth sx={selectSx}>
+              <InputLabel>Shift</InputLabel>
+              <Select
+                value={shift}
+                label="Shift"
+                onChange={(e) => setShift(e.target.value)}
+              >
+                <MenuItem value="">All</MenuItem>
+                {["1st", "2nd", "3rd"].map((s) => (
+                  <MenuItem key={s} value={s}>
+                    {s}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 3, md: 3 }}>
             <FormControl size="small" fullWidth sx={selectSx}>
@@ -232,18 +603,47 @@ export default function ApprovedStudentsPage() {
                 type="date"
                 value={validityDateTo}
                 onChange={(e) => setValidityDateTo(e.target.value)}
-                sx={{ "& .MuiOutlinedInput-root": { height: 40, borderRadius: "10px", mt: 1 } }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    height: 40,
+                    borderRadius: "10px",
+                    mt: 1,
+                  },
+                }}
                 InputLabelProps={{ shrink: true }}
               />
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, sm: 3, md: 2,  }}>
-            <Box onClick={handleApply} sx={{ height: 40, px: 3, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", bgcolor: "#2563EB", color: "#fff", cursor: "pointer", fontWeight: 700, fontSize: "0.83rem", "&:hover": { bgcolor: "#1D4ED8" } }}>Apply</Box>
+          <Grid size={{ xs: 12, sm: 3, md: 2 }}>
+            <Box
+              onClick={handleApply}
+              sx={{
+                height: 40,
+                px: 3,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "10px",
+                bgcolor: "#2563EB",
+                color: "#fff",
+                cursor: "pointer",
+                fontWeight: 700,
+                fontSize: "0.83rem",
+                "&:hover": { bgcolor: "#1D4ED8" },
+              }}
+            >
+              Apply
+            </Box>
           </Grid>
           {Object.keys(appliedFilters).length > 0 && (
-            <Grid size={{ xs: 12, sm: 3, md: 2,  }}>
+            <Grid size={{ xs: 12, sm: 3, md: 2 }}>
               <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
-                <IconButton onClick={handleReset} sx={{ height: 40, width: 40, bgcolor: "#F1F5F9" }}><RestartAltOutlined /></IconButton>
+                <IconButton
+                  onClick={handleReset}
+                  sx={{ height: 40, width: 40, bgcolor: "#F1F5F9" }}
+                >
+                  <RestartAltOutlined />
+                </IconButton>
               </Box>
             </Grid>
           )}
@@ -251,36 +651,98 @@ export default function ApprovedStudentsPage() {
       </Box>
 
       {/* Main List Container */}
-      <Box sx={{ bgcolor: { xs: "transparent", md: "#fff" }, borderRadius: "14px", border: { xs: "none", md: "1px solid #E2E8F0" }, overflow: "hidden" }}>
-        
+      <Box
+        sx={{
+          bgcolor: { xs: "transparent", md: "#fff" },
+          borderRadius: "14px",
+          border: { xs: "none", md: "1px solid #E2E8F0" },
+          overflow: "hidden",
+        }}
+      >
         {/* Table Header (Desktop) */}
-        <Box sx={{ ...desktopGridSx, py: 1.5, borderBottom: "1px solid #F1F5F9", bgcolor: "#FAFAFA" }}>
+        <Box
+          sx={{
+            ...desktopGridSx,
+            py: 1.5,
+            borderBottom: "1px solid #F1F5F9",
+            bgcolor: "#FAFAFA",
+          }}
+        >
           {colHdr("Student Name")}
           {colHdr("Pickup Point")}
           {colHdr("Shift")}
           {colHdr("Year")}
           {colHdr("Department")}
-          <p style={{ margin: 0, fontSize: "0.68rem", fontWeight: 700, color: "#94A3B8", textAlign: "right", letterSpacing: "0.09em" }}>ACTIONS</p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: "#94A3B8",
+              textAlign: "right",
+              letterSpacing: "0.09em",
+            }}
+          >
+            ACTIONS
+          </p>
         </Box>
 
         {/* Content Area */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 1.5, md: 0 } }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: { xs: 1.5, md: 0 },
+          }}
+        >
           {loading ? (
             [1, 2, 3, 4, 5].map((i) => (
-              <Box key={i} sx={{ ...desktopGridSx, display: { xs: "flex", md: "grid" }, flexDirection: "column", py: 2, borderBottom: "1px solid #F8FAFC" }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
+              <Box
+                key={i}
+                sx={{
+                  ...desktopGridSx,
+                  display: { xs: "flex", md: "grid" },
+                  flexDirection: "column",
+                  py: 2,
+                  borderBottom: "1px solid #F8FAFC",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    minWidth: 0,
+                  }}
+                >
                   <Skeleton variant="rounded" width={38} height={38} />
-                  <Box sx={{ minWidth: 0 }}><Skeleton width={120} height={16} /><Skeleton width={80} height={12} sx={{ mt: 0.5 }} /></Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Skeleton width={120} height={16} />
+                    <Skeleton width={80} height={12} sx={{ mt: 0.5 }} />
+                  </Box>
                 </Box>
-                <Box sx={{ display: { xs: "none", md: "block" } }}><Skeleton width="80%" height={16} /></Box>
-                <Box sx={{ display: { xs: "none", md: "block" } }}><Skeleton width="40px" height={22} /></Box>
-                <Box sx={{ display: { xs: "none", md: "block" } }}><Skeleton width="50px" height={16} /></Box>
-                <Box sx={{ display: { xs: "none", md: "block" } }}><Skeleton width="70%" height={16} /></Box>
-                <Box sx={{ display: "flex", justifyContent: "flex-end" }}><Skeleton width={32} height={32} /></Box>
+                <Box sx={{ display: { xs: "none", md: "block" } }}>
+                  <Skeleton width="80%" height={16} />
+                </Box>
+                <Box sx={{ display: { xs: "none", md: "block" } }}>
+                  <Skeleton width="40px" height={22} />
+                </Box>
+                <Box sx={{ display: { xs: "none", md: "block" } }}>
+                  <Skeleton width="50px" height={16} />
+                </Box>
+                <Box sx={{ display: { xs: "none", md: "block" } }}>
+                  <Skeleton width="70%" height={16} />
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                  <Skeleton width={32} height={32} />
+                </Box>
               </Box>
             ))
           ) : students.length === 0 ? (
-            <Box sx={{ py: 8, textAlign: "center", color: "#94A3B8" }}><PeopleAltOutlined sx={{ fontSize: 40, opacity: 0.3 }} /><p>No students found</p></Box>
+            <Box sx={{ py: 8, textAlign: "center", color: "#94A3B8" }}>
+              <PeopleAltOutlined sx={{ fontSize: 40, opacity: 0.3 }} />
+              <p>No students found</p>
+            </Box>
           ) : (
             students.map((s, idx) => (
               <Box
@@ -298,70 +760,230 @@ export default function ApprovedStudentsPage() {
                   bgcolor: { xs: "#fff", md: "transparent" },
                   borderRadius: { xs: "14px", md: 0 },
                   border: { xs: "1px solid #E2E8F0", md: "none" },
-                  borderBottom: { xs: "none", md: idx === students.length - 1 ? "none" : "1px solid #F8FAFC" },
+                  borderBottom: {
+                    xs: "none",
+                    md:
+                      idx === students.length - 1
+                        ? "none"
+                        : "1px solid #F8FAFC",
+                  },
                   transition: "background 0.1s ease",
-                  "&:hover": { bgcolor: "#FAFAFA" }
+                  "&:hover": { bgcolor: "#FAFAFA" },
                 }}
               >
                 {/* 1. Student Info (Matches "Student Name" header) */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0, width: "100%" }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    minWidth: 0,
+                    width: "100%",
+                  }}
+                >
                   <Avatar
                     src={s.photoUrl}
                     variant="rounded"
-                    sx={{ width: 38, height: 38, borderRadius: "10px", bgcolor: "#EFF6FF", color: "#2563EB", border: "1.5px solid #E2E8F0", flexShrink: 0 }}
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: "10px",
+                      bgcolor: "#EFF6FF",
+                      color: "#2563EB",
+                      border: "1.5px solid #E2E8F0",
+                      flexShrink: 0,
+                    }}
                   >
                     {s.fullName?.[0]}
                   </Avatar>
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: 700, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                          color: "#0F172A",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {s.fullName}
                       </p>
                       <Box sx={{ display: { xs: "flex", md: "none" } }}>
-                        <ActionButtons student={s} loading={reprintLoading === s.receiptNumber} onEdit={handleEdit} onPrint={handleReprint} />
+                        <ActionButtons
+                          student={s}
+                          loading={reprintLoading === s.receiptNumber}
+                          onEdit={handleEdit}
+                          onPrint={handleReprint}
+                        />
                       </Box>
                     </Box>
-                    <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748B" }}>
-                      {s.mobile} • <span style={{ fontWeight: 700, color: "#475569" }}>{s.receiptNumber}</span>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.72rem",
+                        color: "#64748B",
+                      }}
+                    >
+                      {s.mobile} •{" "}
+                      <span style={{ fontWeight: 700, color: "#475569" }}>
+                        {s.receiptNumber}
+                      </span>
                     </p>
                   </Box>
                 </Box>
 
                 {/* 2. Pickup (Desktop Only) */}
                 <Box sx={{ display: { xs: "none", md: "block" }, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: "0.82rem", color: "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "0.82rem",
+                      color: "#334155",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {s.pickupPoint?.label || "—"}
                   </p>
                 </Box>
 
                 {/* 3. Shift (Desktop Only) */}
                 <Box sx={{ display: { xs: "none", md: "block" }, minWidth: 0 }}>
-                  {s.shift ? <Chip label={s.shift} size="small" sx={{ ...shiftChipSx(s.shift) }} /> : "—"}
+                  {s.shift ? (
+                    <Chip
+                      label={s.shift}
+                      size="small"
+                      sx={{ ...shiftChipSx(s.shift) }}
+                    />
+                  ) : (
+                    "—"
+                  )}
                 </Box>
 
                 {/* 4. Year (Desktop Only) */}
                 <Box sx={{ display: { xs: "none", md: "block" }, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: "0.82rem", color: "#334155", fontWeight: 600 }}>{YEAR_LABEL[s.year] || s.year}</p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "0.82rem",
+                      color: "#334155",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {YEAR_LABEL[s.year] || s.year}
+                  </p>
                 </Box>
 
                 {/* 5. Dept (Desktop Only) */}
                 <Box sx={{ display: { xs: "none", md: "block" }, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: "0.82rem", color: "#64748B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "0.82rem",
+                      color: "#64748B",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {s.department?.label || "—"}
                   </p>
                 </Box>
 
                 {/* Mobile View: Details Grid */}
-                <Box sx={{ display: { xs: "grid", md: "none" }, gridTemplateColumns: "1fr 1fr", width: "100%", gap: 1.5, pt: 1.5, borderTop: "1px solid #F1F5F9" }}>
-                  <Box><p style={{ margin: 0, fontSize: "0.75rem", color: "#94A3B8" }}>PICKUP</p><p style={{ margin: 0, fontSize: "0.82rem" }}>{s.pickupPoint?.label || "—"}</p></Box>
-                  <Box><p style={{ margin: 0, fontSize: "0.75rem", color: "#94A3B8" }}>SHIFT</p><p style={{ margin: 0, fontSize: "0.82rem" }}>{s.shift || "—"}</p></Box>
-                  <Box><p style={{ margin: 0, fontSize: "0.75rem", color: "#94A3B8" }}>YEAR</p><p style={{ margin: 0, fontSize: "0.82rem" }}>{YEAR_LABEL[s.year] || s.year}</p></Box>
-                  <Box><p style={{ margin: 0, fontSize: "0.75rem", color: "#94A3B8" }}>DEPT</p><p style={{ margin: 0, fontSize: "0.82rem", color: "#64748B" }}>{s.department?.label || "—"}</p></Box>
+                <Box
+                  sx={{
+                    display: { xs: "grid", md: "none" },
+                    gridTemplateColumns: "1fr 1fr",
+                    width: "100%",
+                    gap: 1.5,
+                    pt: 1.5,
+                    borderTop: "1px solid #F1F5F9",
+                  }}
+                >
+                  <Box>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.75rem",
+                        color: "#94A3B8",
+                      }}
+                    >
+                      PICKUP
+                    </p>
+                    <p style={{ margin: 0, fontSize: "0.82rem" }}>
+                      {s.pickupPoint?.label || "—"}
+                    </p>
+                  </Box>
+                  <Box>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.75rem",
+                        color: "#94A3B8",
+                      }}
+                    >
+                      SHIFT
+                    </p>
+                    <p style={{ margin: 0, fontSize: "0.82rem" }}>
+                      {s.shift || "—"}
+                    </p>
+                  </Box>
+                  <Box>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.75rem",
+                        color: "#94A3B8",
+                      }}
+                    >
+                      YEAR
+                    </p>
+                    <p style={{ margin: 0, fontSize: "0.82rem" }}>
+                      {YEAR_LABEL[s.year] || s.year}
+                    </p>
+                  </Box>
+                  <Box>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.75rem",
+                        color: "#94A3B8",
+                      }}
+                    >
+                      DEPT
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.82rem",
+                        color: "#64748B",
+                      }}
+                    >
+                      {s.department?.label || "—"}
+                    </p>
+                  </Box>
                 </Box>
 
                 {/* 6. Actions (Desktop Only) */}
-                <Box sx={{ display: { xs: "none", md: "flex" }, justifyContent: "flex-end" }}>
-                  <ActionButtons student={s} loading={reprintLoading === s.receiptNumber} onEdit={handleEdit} onPrint={handleReprint} />
+                <Box
+                  sx={{
+                    display: { xs: "none", md: "flex" },
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  <ActionButtons
+                    student={s}
+                    loading={reprintLoading === s.receiptNumber}
+                    onEdit={handleEdit}
+                    onPrint={handleReprint}
+                  />
                 </Box>
               </Box>
             ))
@@ -370,17 +992,44 @@ export default function ApprovedStudentsPage() {
 
         {/* Footer: Load More */}
         {!loading && hasMore && (
-          <Box sx={{ p: 3, textAlign: "center", borderTop: "1px solid #F1F5F9" }}>
-            <Box onClick={handleLoadMore} sx={{ color: "#2563EB", fontWeight: 700, cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>
-              {loadingMore ? "Loading..." : `Load More Students (${totalCount - students.length} remaining)`}
+          <Box
+            sx={{ p: 3, textAlign: "center", borderTop: "1px solid #F1F5F9" }}
+          >
+            <Box
+              onClick={handleLoadMore}
+              sx={{
+                color: "#2563EB",
+                fontWeight: 700,
+                cursor: "pointer",
+                "&:hover": { textDecoration: "underline" },
+              }}
+            >
+              {loadingMore
+                ? "Loading..."
+                : `Load More Students (${totalCount - students.length} remaining)`}
             </Box>
           </Box>
         )}
       </Box>
 
       {/* Modals */}
-      <ReceiptDialog open={receiptOpen} receiptData={receiptData} onClose={() => { setReceiptOpen(false); setReceiptData(null); }} />
-      <EditApprovedStudentModal open={editOpen} student={editStudent} onClose={() => { setEditOpen(false); setEditStudent(null); }} onSaved={handleEditSaved} />
+      <ReceiptDialog
+        open={receiptOpen}
+        receiptData={receiptData}
+        onClose={() => {
+          setReceiptOpen(false);
+          setReceiptData(null);
+        }}
+      />
+      <EditApprovedStudentModal
+        open={editOpen}
+        student={editStudent}
+        onClose={() => {
+          setEditOpen(false);
+          setEditStudent(null);
+        }}
+        onSaved={handleEditSaved}
+      />
     </Box>
   );
 }
@@ -388,8 +1037,35 @@ export default function ApprovedStudentsPage() {
 function ActionButtons({ student, loading, onEdit, onPrint }) {
   return (
     <Box sx={{ display: "flex", gap: 0.5 }}>
-      <Tooltip title="Edit"><IconButton size="small" onClick={(e) => { e.stopPropagation(); onEdit(student); }} sx={{ bgcolor: "#FFF7ED", color: "#EA580C" }}><EditOutlined sx={{ fontSize: 16 }} /></IconButton></Tooltip>
-      <Tooltip title="Print"><IconButton size="small" onClick={(e) => { e.stopPropagation(); onPrint(student); }} disabled={loading} sx={{ bgcolor: "#EFF6FF", color: "#2563EB" }}>{loading ? <CircularProgress size={14} /> : <PrintOutlined sx={{ fontSize: 16 }} />}</IconButton></Tooltip>
+      <Tooltip title="Edit">
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(student);
+          }}
+          sx={{ bgcolor: "#FFF7ED", color: "#EA580C" }}
+        >
+          <EditOutlined sx={{ fontSize: 16 }} />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Print">
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPrint(student);
+          }}
+          disabled={loading}
+          sx={{ bgcolor: "#EFF6FF", color: "#2563EB" }}
+        >
+          {loading ? (
+            <CircularProgress size={14} />
+          ) : (
+            <PrintOutlined sx={{ fontSize: 16 }} />
+          )}
+        </IconButton>
+      </Tooltip>
     </Box>
   );
 }

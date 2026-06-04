@@ -5,9 +5,21 @@ import { CloseOutlined, PrintOutlined } from "@mui/icons-material";
 // Year labels
 const YEAR_MAP = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" };
 const SHIFT_MAP = {
-  "7:30": "1st (7:30 AM)",
-  "9:30": "2nd (9:30 AM)",
+  "1st": "1st (07:30 AM)",
+  "2nd": "2nd (09:30 AM)",
+  "3rd": "3rd (11:30 AM)",
+  "7:30": "1st (07:30 AM)",
+  "9:30": "2nd (09:30 AM)",
   "10:30": "3rd (10:30 AM)",
+};
+const formatShift = (shift) => {
+  if (!shift) return "";
+  if (SHIFT_MAP[shift]) return SHIFT_MAP[shift];
+  const s = String(shift).toLowerCase();
+  if (s.includes("1st") || s.includes("7:30")) return "1st (07:30 AM)";
+  if (s.includes("2nd") || s.includes("9:30")) return "2nd (09:30 AM)";
+  if (s.includes("3rd") || s.includes("10:30")) return "3rd (11:30 AM)";
+  return shift;
 };
 
 // Format date helper
@@ -129,7 +141,7 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
 
     const data = receiptData;
     const yearLabel = YEAR_MAP[data.year] || data.year;
-    const shiftLabel = SHIFT_MAP[data.shift] || data.shift;
+    const shiftLabel = formatShift(data.shift);
     const deptLabel = data.department?.label || data.department || "—";
     const pickupLabel = data.pickupPoint?.label || data.pickupPoint || "—";
     const paymentDisplay = getPaymentModeDisplay(data);
@@ -680,7 +692,7 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
 
   const data = receiptData;
   const yearLabel = YEAR_MAP[data.year] || data.year;
-  const shiftLabel = SHIFT_MAP[data.shift] || data.shift;
+  const shiftLabel = formatShift(data.shift);
   const deptLabel = data.department?.label || data.department || "—";
   const pickupLabel = data.pickupPoint?.label || data.pickupPoint || "—";
   const paymentDisplay = getPaymentModeDisplay(data);

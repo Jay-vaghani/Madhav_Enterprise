@@ -274,7 +274,10 @@ export const fetchApprovedStudents = async (token, filters = {}) => {
   if (filters.shift) params.set("shift", filters.shift);
   if (filters.department) params.set("department", filters.department);
   if (filters.route) params.set("route", filters.route);
+  if (filters.settlement) params.set("settlement", filters.settlement);
   if (filters.validityDateTo) params.set("validityDateTo", filters.validityDateTo);
+  if (filters.searchName) params.set("searchName", filters.searchName);
+  if (filters.searchReceipt) params.set("searchReceipt", filters.searchReceipt);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.limit) params.set("limit", String(filters.limit));
 
@@ -774,4 +777,159 @@ export const deletePickupPoint = async (token, id) => {
   return response.json();
 };
 
+// ═══════════════════════════════════════════════════════════════
+// Bus Management API
+// ═══════════════════════════════════════════════════════════════
 
+export const fetchAllBuses = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/buses`, {
+    headers: authHeaders(token),
+  });
+  if (!response.ok) throw new Error("Failed to fetch buses");
+  return response.json();
+};
+
+export const createBus = async (token, busData) => {
+  const response = await fetch(`${API_BASE_URL}/buses`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(busData),
+  });
+  if (!response.ok) throw new Error("Failed to create bus");
+  return response.json();
+};
+
+export const updateBus = async (token, id, busData) => {
+  const response = await fetch(`${API_BASE_URL}/buses/${id}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(busData),
+  });
+  if (!response.ok) throw new Error("Failed to update bus");
+  return response.json();
+};
+
+export const deleteBus = async (token, id) => {
+  const response = await fetch(`${API_BASE_URL}/buses/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!response.ok) throw new Error("Failed to delete bus");
+  return response.json();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Fuel Management API
+// ═══════════════════════════════════════════════════════════════
+
+export const fetchAllFuelEntries = async (token, busId = "", startDate = "", endDate = "", driverId = "") => {
+  const params = new URLSearchParams();
+  if (busId) params.set("busId", busId);
+  if (driverId) params.set("driverId", driverId);
+  if (startDate) params.set("startDate", startDate);
+  if (endDate) params.set("endDate", endDate);
+
+  const qs = params.toString();
+  const url = `${API_BASE_URL}/fuel${qs ? `?${qs}` : ""}`;
+  const response = await fetch(url, {
+    headers: authHeaders(token),
+  });
+  if (!response.ok) throw new Error("Failed to fetch fuel entries");
+  return response.json();
+};
+
+export const fetchFuelAnalytics = async (token, startDate = "", endDate = "") => {
+  const params = new URLSearchParams();
+  if (startDate) params.set("startDate", startDate);
+  if (endDate) params.set("endDate", endDate);
+
+  const qs = params.toString();
+  const url = `${API_BASE_URL}/fuel/analytics${qs ? `?${qs}` : ""}`;
+  const response = await fetch(url, {
+    headers: authHeaders(token),
+  });
+  if (!response.ok) throw new Error("Failed to fetch fuel analytics");
+  return response.json();
+};
+
+export const createFuelEntry = async (token, fuelData) => {
+  const response = await fetch(`${API_BASE_URL}/fuel`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(fuelData),
+  });
+  if (!response.ok) throw new Error("Failed to create fuel entry");
+  return response.json();
+};
+
+export const updateFuelEntry = async (token, id, fuelData) => {
+  const response = await fetch(`${API_BASE_URL}/fuel/${id}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(fuelData),
+  });
+  if (!response.ok) throw new Error("Failed to update fuel entry");
+  return response.json();
+};
+
+export const deleteFuelEntry = async (token, id) => {
+  const response = await fetch(`${API_BASE_URL}/fuel/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!response.ok) throw new Error("Failed to delete fuel entry");
+  return response.json();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Driver Management API
+// ═══════════════════════════════════════════════════════════════
+
+export const fetchAllDrivers = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/drivers`, {
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch drivers");
+  }
+  return response.json();
+};
+
+export const createDriver = async (token, driverData) => {
+  const response = await fetch(`${API_BASE_URL}/drivers`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(driverData),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to create driver");
+  }
+  return response.json();
+};
+
+export const updateDriver = async (token, id, driverData) => {
+  const response = await fetch(`${API_BASE_URL}/drivers/${id}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(driverData),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to update driver");
+  }
+  return response.json();
+};
+
+export const deleteDriver = async (token, id) => {
+  const response = await fetch(`${API_BASE_URL}/drivers/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to delete driver");
+  }
+  return response.json();
+};
