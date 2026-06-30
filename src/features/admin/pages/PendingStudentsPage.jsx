@@ -672,6 +672,7 @@ export default function PendingStudentsPage() {
           filteredStudents.map((student, index) => (
             <Box
               key={student._id}
+              onClick={() => openVerification(student)}
               sx={{
                 display: "flex",
                 alignItems: "center",
@@ -681,6 +682,7 @@ export default function PendingStudentsPage() {
                   index < filteredStudents.length - 1
                     ? "1px solid #F1F5F9"
                     : "none",
+                cursor: "pointer",
                 transition: "background 0.15s ease",
                 "&:hover": { bgcolor: "#FAFBFC" },
               }}
