@@ -128,19 +128,19 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
         <form onSubmit={handleSubmit(onSubmit)}>
           <Grid container spacing={3}>
             {/* Basic Details */}
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <p style={labelSx}>Student Name *</p>
               <Controller name="studentName" control={control} rules={{ required: "Required" }} render={({ field }) => (
                 <TextField {...field} size="small" fullWidth error={!!errors.studentName} helperText={errors.studentName?.message} sx={fieldSx} />
               )} />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <p style={labelSx}>Mobile Number *</p>
               <Controller name="mobileNumber" control={control} rules={{ required: "Required" }} render={({ field }) => (
                 <TextField {...field} size="small" fullWidth error={!!errors.mobileNumber} helperText={errors.mobileNumber?.message} sx={fieldSx} />
               )} />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <p style={labelSx}>Department *</p>
               <Controller name="department" control={control} rules={{ required: "Required" }} render={({ field: { onChange, value } }) => (
                 <Autocomplete
@@ -151,7 +151,7 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
             </Grid>
 
             {/* Travel Details */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <p style={labelSx}>Pickup Point *</p>
               <Controller name="pickupPoint" control={control} rules={{ required: "Required" }} render={({ field: { onChange, value } }) => (
                 <Autocomplete
@@ -160,7 +160,7 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
                 />
               )} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <p style={labelSx}>Trip Type *</p>
               <Controller name="tripType" control={control} rules={{ required: "Required" }} render={({ field }) => (
                 <TextField {...field} select size="small" fullWidth error={!!errors.tripType} helperText={errors.tripType?.message} sx={fieldSx}>
@@ -169,13 +169,13 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
               )} />
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <p style={labelSx}>Valid From *</p>
               <Controller name="validFrom" control={control} rules={{ required: "Required" }} render={({ field }) => (
                 <TextField {...field} type="date" size="small" fullWidth error={!!errors.validFrom} helperText={errors.validFrom?.message} sx={fieldSx} InputLabelProps={{ shrink: true }} />
               )} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <p style={labelSx}>Valid To *</p>
               <Controller name="validTo" control={control} rules={{ required: "Required" }} render={({ field }) => (
                 <TextField {...field} type="date" size="small" fullWidth disabled={watchedTripType === "One Day Pass"} error={!!errors.validTo} helperText={errors.validTo?.message} sx={fieldSx} InputLabelProps={{ shrink: true }} />
@@ -183,13 +183,13 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
             </Grid>
 
             {/* Payment Section */}
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <p style={labelSx}>Fee Amount *</p>
               <Controller name="feeAmount" control={control} rules={{ required: "Required", min: 0 }} render={({ field }) => (
                 <TextField {...field} type="number" size="small" fullWidth error={!!errors.feeAmount} helperText={errors.feeAmount?.message} sx={fieldSx} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
               )} />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <p style={labelSx}>Payment Method *</p>
               <Controller name="paymentMethod" control={control} rules={{ required: "Required" }} render={({ field }) => (
                 <TextField {...field} select size="small" fullWidth sx={fieldSx}>
@@ -202,7 +202,7 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
 
             {watchedPaymentMethod === "bank" && (
               <>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <p style={labelSx}>Settlement Account *</p>
                   <Controller name="settlementAccount" control={control} rules={{ required: "Required" }} render={({ field }) => (
                     <RadioGroup row {...field}>
@@ -211,7 +211,7 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
                     </RadioGroup>
                   )} />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <p style={labelSx}>Transaction ID *</p>
                   <Controller name="transaction1" control={control} rules={{ required: "Required" }} render={({ field }) => (
                     <TextField {...field} size="small" type="tel" fullWidth error={!!errors.transaction1} helperText={errors.transaction1?.message} sx={fieldSx} />
@@ -222,7 +222,7 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
 
             {watchedPaymentMethod === "both" && (
               <>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <p style={labelSx}>Settlement Account *</p>
                   <Controller name="settlementAccount" control={control} rules={{ required: "Required" }} render={({ field }) => (
                     <RadioGroup row {...field}>
@@ -231,19 +231,19 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
                     </RadioGroup>
                   )} />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <p style={labelSx}>Cash Amount *</p>
                   <Controller name="cashAmount" control={control} rules={{ required: "Required" }} render={({ field }) => (
                     <TextField {...field} type="number" size="small" fullWidth sx={fieldSx} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
                   )} />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <p style={labelSx}>Bank Amount *</p>
                   <Controller name="bankAmount" control={control} render={({ field }) => (
                     <TextField {...field} type="number" size="small" fullWidth disabled sx={{ ...fieldSx, opacity: 0.8 }} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
                   )} />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <p style={labelSx}>Transaction ID *</p>
                   <Controller name="transaction1" control={control} rules={{ required: "Required" }} render={({ field }) => (
                     <TextField {...field} size="small" type="tel" fullWidth error={!!errors.transaction1} helperText={errors.transaction1?.message} sx={fieldSx} />
@@ -252,14 +252,14 @@ export default function EditPassDialog({ open, passData, onClose, onSave }) {
               </>
             )}
 
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <p style={labelSx}>Remarks (Optional)</p>
               <Controller name="remarks" control={control} render={({ field }) => (
                 <TextField {...field} size="small" fullWidth multiline rows={2} sx={fieldSx} />
               )} />
             </Grid>
 
-            <Grid item xs={12} sx={{ mt: 1, display: "flex", justifyContent: "flex-end", gap: 2 }}>
+            <Grid size={{ xs: 12 }}sx={{ mt: 1, display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button onClick={onClose} sx={{ color: "#64748B", fontWeight: 600 }}>Cancel</Button>
               <Button type="submit" variant="contained" disabled={submitting} sx={{ bgcolor: "#2563EB", px: 3, borderRadius: "10px", fontWeight: 700, "&:hover": { bgcolor: "#1D4ED8" } }}>
                 {submitting ? <CircularProgress size={24} color="inherit" /> : "Save Changes"}

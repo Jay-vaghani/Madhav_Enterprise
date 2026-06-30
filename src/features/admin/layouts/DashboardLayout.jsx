@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   ThemeProvider,
@@ -18,6 +18,7 @@ import {
   DirectionsBusOutlined,
   LocalGasStationOutlined,
   PersonOutlined,
+  WarningAmber,
 } from "@mui/icons-material";
 import { theme } from "../../../theme/theme";
 import AdminSidebar from "../components/AdminSidebar";
@@ -28,26 +29,49 @@ import ApprovedStudentsPage from "../pages/ApprovedStudentsPage";
 import RejectedStudentsPage from "../pages/RejectedStudentsPage";
 import CancellationPage from "../pages/CancellationPage";
 import TemporaryPassesPage from "../pages/TemporaryPassesPage";
-
 import SettingsPage from "../pages/SettingsPage";
+import StaffSettingsPage from "../pages/StaffSettingsPage";
 import BusManagementPage from "../../fleet/pages/BusManagementPage";
 import FuelManagementPage from "../../fleet/pages/FuelManagementPage";
 import DriverManagementPage from "../../fleet/pages/DriverManagementPage";
+import StaffManagementPage from "../../staff/pages/StaffManagementPage";
+import StaffPaymentsPage from "../../staff/pages/StaffPaymentsPage";
+import StaffAnalyticsPage from "../../staff/pages/StaffAnalyticsPage";
+import ConfiscationsPage from "../pages/ConfiscationsPage";
 
 const NAV_ITEMS = [
   { id: "pending", label: "Pending", icon: <PendingActionsOutlined /> },
   { id: "approved", label: "Approved", icon: <PeopleAltOutlined /> },
+  { id: "confiscations", label: "Confiscations", icon: <WarningAmber /> },
   { id: "rejected", label: "Rejected", icon: <DoNotDisturbAltOutlined /> },
-  { id: "temporary_passes", label: "Passes", icon: <ConfirmationNumberOutlined /> },
+  {
+    id: "temporary_passes",
+    label: "Passes",
+    icon: <ConfirmationNumberOutlined />,
+  },
   { id: "cancellation", label: "Refund", icon: <MoneyOffOutlined /> },
   { id: "buses", label: "Buses", icon: <DirectionsBusOutlined /> },
   { id: "fuel", label: "Fuel", icon: <LocalGasStationOutlined /> },
   { id: "drivers", label: "Drivers", icon: <PersonOutlined /> },
+  { id: "staff", label: "Staff", icon: <PeopleAltOutlined /> },
+  { id: "staff_analytics", label: "Staff Stats", icon: <BarChartOutlined /> },
   { id: "reports", label: "Reports", icon: <BarChartOutlined /> },
 ];
 
 export default function DashboardLayout() {
   const [activePage, setActivePage] = useState("pending");
+
+  // SEO: prevent admin pages from being indexed by search engines
+  useEffect(() => {
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex, nofollow";
+    meta.setAttribute("data-admin-noindex", "true");
+    document.head.appendChild(meta);
+    return () => {
+      document.head.querySelector('meta[data-admin-noindex="true"]')?.remove();
+    };
+  }, []);
 
   const renderPage = () => {
     switch (activePage) {
@@ -55,6 +79,8 @@ export default function DashboardLayout() {
         return <PendingStudentsPage />;
       case "approved":
         return <ApprovedStudentsPage />;
+      case "confiscations":
+        return <ConfiscationsPage />;
       case "rejected":
         return <RejectedStudentsPage />;
       case "reports":
@@ -65,12 +91,18 @@ export default function DashboardLayout() {
         return <TemporaryPassesPage />;
       case "settings":
         return <SettingsPage />;
+      case "staff_settings":
+        return <StaffSettingsPage />;
       case "buses":
         return <BusManagementPage />;
       case "fuel":
         return <FuelManagementPage />;
       case "drivers":
         return <DriverManagementPage />;
+      case "staff":
+        return <StaffManagementPage />;
+      case "staff_analytics":
+        return <StaffAnalyticsPage />;
       default:
         return <PendingStudentsPage />;
     }

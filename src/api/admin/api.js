@@ -184,6 +184,33 @@ export const updateStudentPhoto = async (token, studentId, photoBase64) => {
 };
 
 /**
+ * POST /api/admin/staff/:id/update-photo
+ */
+export const updateStaffPhoto = async (token, staffId, photoBase64) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/staff/${staffId}/update-photo`,
+    {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify({ photoBase64 }),
+    }
+  );
+
+  if (!response.ok) {
+    let errorMessage = "Failed to update staff photo";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+/**
  * GET /api/admin/payment-stats
  */
 export const fetchPaymentStats = async (token) => {
@@ -241,6 +268,8 @@ export const fetchAnalytics = async (token, filters = {}) => {
   if (filters.shift) params.set("shift", filters.shift);
   if (filters.department) params.set("department", filters.department);
   if (filters.route) params.set("route", filters.route);
+  if (filters.fromDate) params.set("fromDate", filters.fromDate);
+  if (filters.toDate) params.set("toDate", filters.toDate);
 
   const qs = params.toString();
   const url = `${API_BASE_URL}/admin/analytics${qs ? `?${qs}` : ""}`;
@@ -778,6 +807,115 @@ export const deletePickupPoint = async (token, id) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// Staff Analytics API
+// ═══════════════════════════════════════════════════════════════
+
+export const fetchStaffAnalytics = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/admin/staff-analytics`, {
+    headers: authHeaders(token),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to fetch staff analytics";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Staff Settings API - Staff Pickup Points
+// ═══════════════════════════════════════════════════════════════
+
+export const fetchAllStaffPickupPoints = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/staff-settings/pickup-points`, {
+    headers: authHeaders(token),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to fetch staff pickup points";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const createStaffPickupPoint = async (token, pickupPointData) => {
+  const response = await fetch(`${API_BASE_URL}/staff-settings/pickup-points`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(pickupPointData),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to create staff pickup point";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const updateStaffPickupPoint = async (token, id, pickupPointData) => {
+  const response = await fetch(`${API_BASE_URL}/staff-settings/pickup-points/${id}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(pickupPointData),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to update staff pickup point";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const deleteStaffPickupPoint = async (token, id) => {
+  const response = await fetch(`${API_BASE_URL}/staff-settings/pickup-points/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to delete staff pickup point";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+// ═══════════════════════════════════════════════════════════════
 // Bus Management API
 // ═══════════════════════════════════════════════════════════════
 
@@ -930,6 +1068,180 @@ export const deleteDriver = async (token, id) => {
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.message || "Failed to delete driver");
+  }
+  return response.json();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Staff Management API (Public & Admin)
+// ═══════════════════════════════════════════════════════════════
+
+// --- Public Staff API ---
+export const registerStaff = async (staffData) => {
+  const response = await fetch(`${API_BASE_URL}/staff/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(staffData),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to register staff");
+  }
+  return response.json();
+};
+
+export const fetchStaffPickupPoints = async () => {
+  const response = await fetch(`${API_BASE_URL}/staff-settings/public/pickup-points`);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch pickup points");
+  }
+  return response.json();
+};
+
+export const lookupStaff = async (mobile) => {
+  const response = await fetch(`${API_BASE_URL}/staff/lookup/${mobile}`);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Staff not found");
+  }
+  return response.json();
+};
+
+export const fetchStaffPendingMonths = async (mobile) => {
+  const response = await fetch(`${API_BASE_URL}/staff/pending-months/${mobile}`);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch pending months");
+  }
+  return response.json();
+};
+
+export const submitStaffPayment = async (paymentData) => {
+  const response = await fetch(`${API_BASE_URL}/staff/submit-payment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(paymentData),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to submit payment");
+  }
+  return response.json();
+};
+
+// --- Admin Staff API ---
+export const fetchAllStaff = async (token, params = {}) => {
+  const qs = new URLSearchParams();
+  if (params.search) qs.set("search", params.search);
+  if (params.status) qs.set("status", params.status);
+  if (params.page) qs.set("page", params.page);
+  if (params.limit) qs.set("limit", params.limit);
+
+  const url = `${API_BASE_URL}/admin/staff${qs.toString() ? `?${qs.toString()}` : ""}`;
+  const response = await fetch(url, { headers: authHeaders(token) });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch staff");
+  }
+  return response.json();
+};
+
+export const fetchStaffById = async (token, id) => {
+  const response = await fetch(`${API_BASE_URL}/admin/staff/${id}`, {
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch staff details");
+  }
+  return response.json();
+};
+
+export const activateStaffService = async (token, id, startDate) => {
+  const response = await fetch(`${API_BASE_URL}/admin/staff/${id}/activate`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify({ startDate }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to activate service");
+  }
+  return response.json();
+};
+
+export const deactivateStaffService = async (token, id, endDate) => {
+  const response = await fetch(`${API_BASE_URL}/admin/staff/${id}/deactivate`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify({ endDate }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to deactivate service");
+  }
+  return response.json();
+};
+
+export const updateStaff = async (token, id, staffData) => {
+  const response = await fetch(`${API_BASE_URL}/admin/staff/${id}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(staffData),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to update staff");
+  }
+  return response.json();
+};
+
+export const deleteStaff = async (token, id) => {
+  const response = await fetch(`${API_BASE_URL}/admin/staff/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to delete staff");
+  }
+  return response.json();
+};
+
+export const fetchPendingStaffPayments = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/admin/staff-payments/pending`, {
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch pending payments");
+  }
+  return response.json();
+};
+
+export const approveStaffPayment = async (token, id, paymentData) => {
+  const response = await fetch(`${API_BASE_URL}/admin/staff-payments/${id}/approve`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(paymentData),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to approve payment");
+  }
+  return response.json();
+};
+
+export const createManualStaffPayment = async (token, paymentData) => {
+  const response = await fetch(`${API_BASE_URL}/admin/staff-payments/manual`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(paymentData),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to create manual payment");
   }
   return response.json();
 };

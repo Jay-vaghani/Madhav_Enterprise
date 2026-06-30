@@ -1,12 +1,16 @@
 import React from "react";
-import { Box, Avatar, Badge, IconButton, Tooltip } from "@mui/material";
+import {
+  Box,
+  Avatar,
+  Badge,
+  IconButton,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import {
   PendingActionsOutlined,
   PeopleAltOutlined,
-  BarChartOutlined,
   SettingsOutlined,
-  HelpOutlineOutlined,
-  AddRoadOutlined,
   LogoutOutlined,
   DirectionsBus,
   MoneyOffOutlined,
@@ -16,11 +20,14 @@ import {
   DirectionsBusOutlined,
   LocalGasStationOutlined,
   PersonOutlined,
+  StackedBarChartOutlined,
+  WarningAmber,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const NAV_ITEMS = [
+  { isDivider: true, id: "div-0", label: "Students" },
   {
     id: "pending",
     label: "Pending Verifications",
@@ -34,6 +41,12 @@ const NAV_ITEMS = [
     active: false,
   },
   {
+    id: "confiscations",
+    label: "Confiscations",
+    icon: WarningAmber,
+    active: false,
+  },
+  {
     id: "rejected",
     label: "Rejected Students",
     icon: DoNotDisturbAltOutlined,
@@ -42,7 +55,7 @@ const NAV_ITEMS = [
   {
     id: "reports",
     label: "Reports",
-    icon: BarChartOutlined,
+    icon: StackedBarChartOutlined,
     active: false,
   },
   {
@@ -57,6 +70,7 @@ const NAV_ITEMS = [
     icon: MoneyOffOutlined,
     active: false,
   },
+  { isDivider: true, id: "div-1", label: "Operations" },
   {
     id: "buses",
     label: "Bus Management",
@@ -76,7 +90,27 @@ const NAV_ITEMS = [
     icon: PersonOutlined,
     active: false,
   },
-
+  { isDivider: true, id: "div-2", label: "Staff" },
+  {
+    id: "staff",
+    label: "Staff Management",
+    icon: ManageAccountsOutlined,
+    active: false,
+  },
+  {
+    id: "staff_analytics",
+    label: "Staff Analytics",
+    icon: StackedBarChartOutlined,
+    active: false,
+  },
+  {
+    id: "staff_settings",
+    label: "Staff Settings",
+    icon: SettingsOutlined,
+    active: false,
+    adminOnly: true,
+  },
+  { isDivider: true, id: "div-3", label: "System", adminOnly: true },
   {
     id: "settings",
     label: "Settings",
@@ -84,11 +118,6 @@ const NAV_ITEMS = [
     active: false,
     adminOnly: true,
   },
-];
-
-const BOTTOM_ITEMS = [
-  { id: "routes", label: "Add & Edit Route", icon: AddRoadOutlined, accent: true, disabled: true },
-  { id: "support", label: "Support", icon: HelpOutlineOutlined, disabled: true },
 ];
 
 export default function AdminSidebar({ activePage, onPageChange }) {
@@ -157,8 +186,30 @@ export default function AdminSidebar({ activePage, onPageChange }) {
       </Box>
 
       {/* Nav Items */}
-      <Box sx={{ flex: 1, px: 1.5, pt: 1 }}>
-        {NAV_ITEMS.filter((item) => !item.adminOnly || user?.role === "admin").map((item) => {
+      <Box sx={{ flex: 1, px: 1.5, pt: 1, overflowY: "auto" }}>
+        {NAV_ITEMS.filter(
+          (item) =>
+            !item.adminOnly ||
+            user?.role === "admin" ||
+            user?.role === "superadmin",
+        ).map((item) => {
+          if (item.isDivider) {
+            return (
+              <Box key={item.id} sx={{ mt: 2.5, mb: 1, mx: 2 }}>
+                <Typography
+                  sx={{
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                    color: "#94A3B8",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {item.label}
+                </Typography>
+              </Box>
+            );
+          }
           const Icon = item.icon;
           const isActive = activePage === item.id;
           return (
@@ -176,7 +227,9 @@ export default function AdminSidebar({ activePage, onPageChange }) {
                 cursor: item.disabled ? "default" : "pointer",
                 opacity: item.disabled ? 0.45 : 1,
                 bgcolor: isActive ? "#EFF6FF" : "transparent",
-                borderLeft: isActive ? "3px solid #2563EB" : "3px solid transparent",
+                borderLeft: isActive
+                  ? "3px solid #2563EB"
+                  : "3px solid transparent",
                 transition: "all 0.15s ease",
                 "&:hover": item.disabled
                   ? {}
@@ -206,48 +259,6 @@ export default function AdminSidebar({ activePage, onPageChange }) {
 
       {/* Bottom Section */}
       <Box sx={{ px: 1.5, pb: 2 }}>
-        {BOTTOM_ITEMS.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Box
-              key={item.id}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1.5,
-                px: 2,
-                py: 1.2,
-                mb: 0.5,
-                borderRadius: "10px",
-                cursor: item.disabled ? "default" : "pointer",
-                opacity: item.disabled ? 0.45 : 1,
-                bgcolor: item.accent ? "#2563EB" : "transparent",
-                "&:hover": item.disabled
-                  ? {}
-                  : { bgcolor: item.accent ? "#1D4ED8" : "#F8FAFC" },
-                transition: "all 0.15s ease",
-              }}
-            >
-              <Icon
-                sx={{
-                  fontSize: 20,
-                  color: item.accent ? "#fff" : "#64748B",
-                }}
-              />
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "0.85rem",
-                  fontWeight: item.accent ? 700 : 500,
-                  color: item.accent ? "#fff" : "#334155",
-                }}
-              >
-                {item.label}
-              </p>
-            </Box>
-          );
-        })}
-
         {/* Logout */}
         <Box
           onClick={handleLogout}

@@ -35,6 +35,7 @@ import {
   DoNotDisturbAltOutlined,
   VisibilityOutlined,
   VisibilityOffOutlined,
+  ContentCopyOutlined,
 } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";
 import { useAuth } from "../context/AuthContext";
@@ -287,7 +288,7 @@ export default function VerificationModal({
       shift: "",
       pickupPoint: null,
       paymentMode: "cash",
-      settlementAccount: "C",
+      settlementAccount: "",
       transaction1: "",
       transaction2: "",
       feeAmount: "",
@@ -361,7 +362,7 @@ export default function VerificationModal({
         shift: student.shift || "",
         pickupPoint: ppObj,
         paymentMode: "cash",
-        settlementAccount: "C",
+        settlementAccount: "",
         transaction1: "",
         transaction2: "",
         feeAmount: ppObj?.fee || "",
@@ -2069,6 +2070,168 @@ export default function VerificationModal({
                     </Box>
                   </>
                 )}
+              </Box>
+              {/* ── At a Glance ── */}
+              <Box sx={premiumCardSx}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    mb: 2,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: "8px",
+                      bgcolor: "#F0FDF4",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#16A34A",
+                    }}
+                  >
+                    <VisibilityOutlined sx={{ fontSize: 18 }} />
+                  </Box>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontWeight: 800,
+                      fontSize: "0.9rem",
+                      color: "#0F172A",
+                    }}
+                  >
+                    At a Glance
+                  </p>
+                </Box>
+
+                <Box
+                  sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
+                >
+                  <Box>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        color: "#64748B",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Year
+                    </p>
+                    <p
+                      style={{
+                        margin: "2px 0 0",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        color: "#1E293B",
+                      }}
+                    >
+                      {student.year || "N/A"}
+                    </p>
+                  </Box>
+                  <Box>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        color: "#64748B",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Contact
+                    </p>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mt: "2px",
+                      }}
+                    >
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "0.85rem",
+                          fontWeight: 600,
+                          color: "#1E293B",
+                        }}
+                      >
+                        {student.mobile || "N/A"}
+                      </p>
+                      {student.mobile && (
+                        <Tooltip title="Copy">
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              navigator.clipboard.writeText(student.mobile)
+                            }
+                            sx={{ p: 0.2 }}
+                          >
+                            <ContentCopyOutlined
+                              sx={{ fontSize: 14, color: "#64748B" }}
+                            />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </Box>
+                  <Box>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        color: "#64748B",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Email
+                    </p>
+                    <p
+                      style={{
+                        margin: "2px 0 0",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        color: "#1E293B",
+                        wordBreak: "break-all",
+                      }}
+                    >
+                      {student.email || "N/A"}
+                    </p>
+                  </Box>
+                  <Box>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        color: "#64748B",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Pickup Point
+                    </p>
+                    <p
+                      style={{
+                        margin: "2px 0 0",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        color: "#1E293B",
+                      }}
+                    >
+                      {typeof student.pickupPoint === "object"
+                        ? student.pickupPoint?.label ||
+                          student.pickupPoint?.name ||
+                          "N/A"
+                        : student.pickupPoint || "N/A"}
+                    </p>
+                  </Box>
+                </Box>
               </Box>
             </Grid>
           </Grid>

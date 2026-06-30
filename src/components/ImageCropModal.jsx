@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
+import imageCompression from "browser-image-compression";
 import {
   Dialog,
   DialogContent,
@@ -31,11 +32,30 @@ export default function ImageCropModal({
     setProcessing(true);
 
     try {
-      const cropped = await getCroppedImg(imageSrc, croppedAreaPixels);
-      onComplete(cropped);
+      // Step 1: pixel-accurate crop → JPEG blob via canvas
+      const croppedBase64 = await getCroppedImg(imageSrc, croppedAreaPixels);
+
+      // Step 2: compress with browser-image-compression → WebP ≤100 KB, max 800px
+      const response = await fetch(croppedBase64);
+      const blob = await response.blob();
+      const file = new File([blob], "crop.jpg", { type: blob.type });
+
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 0.1,          // 100 KB ceiling
+        maxWidthOrHeight: 800,
+        useWebWorker: true,
+        fileType: "image/webp",
+        initialQuality: 0.82,
+      });
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onComplete(reader.result);
+        setProcessing(false);
+      };
+      reader.readAsDataURL(compressed);
     } catch (err) {
-      console.error("Crop failed:", err);
-    } finally {
+      console.error("Crop/compress failed:", err);
       setProcessing(false);
     }
   }, [croppedAreaPixels, imageSrc, onComplete]);
@@ -168,9 +188,12 @@ export default function ImageCropModal({
           }}
         >
           {processing ? (
-            <CircularProgress size={20} sx={{ color: "white" }} />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <CircularProgress size={18} sx={{ color: "white" }} />
+              <span style={{ fontSize: "0.82rem" }}>Compressing…</span>
+            </Box>
           ) : (
-            "Apply Crop"
+            "Apply & Compress"
           )}
         </Button>
       </DialogActions>

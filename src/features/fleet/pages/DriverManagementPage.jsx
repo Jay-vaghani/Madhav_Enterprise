@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import {
   Box,
   Paper,
@@ -21,6 +27,7 @@ import {
   Avatar,
   Badge,
   InputLabel,
+  InputAdornment,
   Table,
   TableBody,
   TableCell,
@@ -54,6 +61,8 @@ import {
   ConfirmationNumberTwoTone,
   WaterDropTwoTone,
   SpeedTwoTone,
+  SearchOutlined,
+  CloseRounded,
 } from "@mui/icons-material";
 import { useAuth } from "../../admin/context/AuthContext";
 import {
@@ -113,6 +122,9 @@ export default function DriverManagementPage() {
 
   // View mode: cards vs leaderboard
   const [viewMode, setViewMode] = useState("cards");
+
+  // Frontend name search
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -176,6 +188,21 @@ export default function DriverManagementPage() {
       .filter((d) => d.entryCount > 0)
       .sort((a, b) => b.avgKmPerLitre - a.avgKmPerLitre);
   }, [driverStats]);
+
+  // ── Frontend-filtered lists (name search, case-insensitive) ──
+  const q = searchQuery.trim().toLowerCase();
+  const filteredDrivers = useMemo(
+    () =>
+      q ? drivers.filter((d) => d.name?.toLowerCase().includes(q)) : drivers,
+    [drivers, q],
+  );
+  const filteredLeaderboard = useMemo(
+    () =>
+      q
+        ? leaderboardData.filter((d) => d.name?.toLowerCase().includes(q))
+        : leaderboardData,
+    [leaderboardData, q],
+  );
 
   // Open driver detail dialog
   const handleOpenDetail = async (driver) => {
@@ -413,7 +440,8 @@ export default function DriverManagementPage() {
             />
           </Box>
           <Typography sx={{ color: "#64748B", fontSize: "0.95rem", ml: 6 }}>
-            Track driver performance, license validity, and fuel efficiency rankings.
+            Track driver performance, license validity, and fuel efficiency
+            rankings.
           </Typography>
         </Box>
 
@@ -442,7 +470,7 @@ export default function DriverManagementPage() {
         </Button>
       </Box>
 
-      {/* Date Range Filter + View Toggle */}
+      {/* Date Range Filter + Search + View Toggle */}
       <Paper
         elevation={0}
         sx={{
@@ -455,7 +483,14 @@ export default function DriverManagementPage() {
       >
         <Grid container spacing={2} alignItems="center">
           <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-            <InputLabel sx={{ color: "#1E293B", fontWeight: 600, mb: 0.5, fontSize: "0.8rem" }}>
+            <InputLabel
+              sx={{
+                color: "#1E293B",
+                fontWeight: 600,
+                mb: 0.5,
+                fontSize: "0.8rem",
+              }}
+            >
               From Date
             </InputLabel>
             <TextField
@@ -473,7 +508,14 @@ export default function DriverManagementPage() {
             />
           </Grid>
           <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-            <InputLabel sx={{ color: "#1E293B", fontWeight: 600, mb: 0.5, fontSize: "0.8rem" }}>
+            <InputLabel
+              sx={{
+                color: "#1E293B",
+                fontWeight: 600,
+                mb: 0.5,
+                fontSize: "0.8rem",
+              }}
+            >
               To Date
             </InputLabel>
             <TextField
@@ -490,8 +532,63 @@ export default function DriverManagementPage() {
               }}
             />
           </Grid>
+
+          {/* Name search */}
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <InputLabel
+              sx={{
+                color: "#1E293B",
+                fontWeight: 600,
+                mb: 0.5,
+                fontSize: "0.8rem",
+              }}
+            >
+              Search Driver
+            </InputLabel>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Search by name…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchOutlined sx={{ fontSize: 18, color: "#94A3B8" }} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchQuery("")}
+                      sx={{ color: "#94A3B8" }}
+                    >
+                      <CloseRounded sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "12px",
+                  bgcolor: "white",
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#E2E8F0",
+                  },
+                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#CBD5E1",
+                  },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#7C3AED",
+                  },
+                },
+              }}
+            />
+          </Grid>
+
           <Grid
-            size={{ xs: 12, sm: 6, md: 8 }}
+            size={{ xs: 12, sm: 12, md: 4 }}
             sx={{
               display: "flex",
               justifyContent: { xs: "flex-start", md: "flex-end" },
@@ -525,7 +622,8 @@ export default function DriverManagementPage() {
                 <GridViewRounded sx={{ fontSize: 18, mr: 0.5 }} /> Cards
               </ToggleButton>
               <ToggleButton value="leaderboard">
-                <LeaderboardRounded sx={{ fontSize: 18, mr: 0.5 }} /> Leaderboard
+                <LeaderboardRounded sx={{ fontSize: 18, mr: 0.5 }} />{" "}
+                Leaderboard
               </ToggleButton>
             </ToggleButtonGroup>
           </Grid>
@@ -536,12 +634,20 @@ export default function DriverManagementPage() {
       <Fade in={!!error || !!success}>
         <Box sx={{ mb: 4 }}>
           {error && (
-            <Alert severity="error" onClose={() => setError("")} sx={{ borderRadius: "12px" }}>
+            <Alert
+              severity="error"
+              onClose={() => setError("")}
+              sx={{ borderRadius: "12px" }}
+            >
               {error}
             </Alert>
           )}
           {success && (
-            <Alert severity="success" onClose={() => setSuccess("")} sx={{ borderRadius: "12px" }}>
+            <Alert
+              severity="success"
+              onClose={() => setSuccess("")}
+              sx={{ borderRadius: "12px" }}
+            >
               {success}
             </Alert>
           )}
@@ -550,10 +656,21 @@ export default function DriverManagementPage() {
 
       {/* Main Content */}
       {isLoading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", minHeight: "40vh", alignItems: "center" }}>
-          <CircularProgress thickness={5} size={48} sx={{ color: "#7C3AED", opacity: 0.8 }} />
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            minHeight: "40vh",
+            alignItems: "center",
+          }}
+        >
+          <CircularProgress
+            thickness={5}
+            size={48}
+            sx={{ color: "#7C3AED", opacity: 0.8 }}
+          />
         </Box>
-      ) : drivers.length === 0 ? (
+      ) : filteredDrivers.length === 0 ? (
         <Box
           sx={{
             p: 10,
@@ -573,17 +690,52 @@ export default function DriverManagementPage() {
               mb: 3,
             }}
           >
-            <PersonTwoTone sx={{ fontSize: 64 }} />
+            {searchQuery ? (
+              <SearchOutlined sx={{ fontSize: 64 }} />
+            ) : (
+              <PersonTwoTone sx={{ fontSize: 64 }} />
+            )}
           </Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: "#475569", mb: 1 }}>
-            No Drivers Registered
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: 700, color: "#475569", mb: 1 }}
+          >
+            {searchQuery
+              ? `No drivers matching "${searchQuery}"`
+              : "No Drivers Registered"}
           </Typography>
           <Typography sx={{ color: "#94A3B8", mb: 4 }}>
-            Start by adding your first driver to the fleet.
+            {searchQuery
+              ? "Try a different name or clear the search."
+              : "Start by adding your first driver to the fleet."}
           </Typography>
-          <Button variant="outlined" onClick={handleOpenNew} sx={{ borderRadius: "10px", textTransform: "none", fontWeight: 600, px: 4 }}>
-            Register Driver
-          </Button>
+          {searchQuery ? (
+            <Button
+              variant="outlined"
+              onClick={() => setSearchQuery("")}
+              sx={{
+                borderRadius: "10px",
+                textTransform: "none",
+                fontWeight: 600,
+                px: 4,
+              }}
+            >
+              Clear Search
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              onClick={handleOpenNew}
+              sx={{
+                borderRadius: "10px",
+                textTransform: "none",
+                fontWeight: 600,
+                px: 4,
+              }}
+            >
+              Register Driver
+            </Button>
+          )}
         </Box>
       ) : viewMode === "leaderboard" ? (
         /* ── LEADERBOARD VIEW ── */
@@ -617,7 +769,7 @@ export default function DriverManagementPage() {
               Driver Efficiency Leaderboard
             </Typography>
             <Chip
-              label={`${leaderboardData.length} drivers`}
+              label={`${filteredLeaderboard.length} drivers`}
               size="small"
               sx={{
                 bgcolor: "#FEF9C3",
@@ -627,52 +779,119 @@ export default function DriverManagementPage() {
               }}
             />
           </Box>
-          {leaderboardData.length === 0 ? (
+          {filteredLeaderboard.length === 0 ? (
             <Box sx={{ p: 6, textAlign: "center" }}>
               <Typography sx={{ color: "#94A3B8", fontWeight: 600 }}>
-                No driver data available for the selected date range.
+                {searchQuery
+                  ? `No drivers matching "${searchQuery}" in this date range.`
+                  : "No driver data available for the selected date range."}
               </Typography>
+              {searchQuery && (
+                <Button
+                  size="small"
+                  onClick={() => setSearchQuery("")}
+                  sx={{ mt: 1.5, textTransform: "none", fontWeight: 600 }}
+                >
+                  Clear Search
+                </Button>
+              )}
             </Box>
           ) : (
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 800, color: "#475569", fontSize: "0.75rem", width: 60 }}>
+                    <TableCell
+                      sx={{
+                        fontWeight: 800,
+                        color: "#475569",
+                        fontSize: "0.75rem",
+                        width: 60,
+                      }}
+                    >
                       Rank
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 800, color: "#475569", fontSize: "0.75rem" }}>
+                    <TableCell
+                      sx={{
+                        fontWeight: 800,
+                        color: "#475569",
+                        fontSize: "0.75rem",
+                      }}
+                    >
                       Driver
                     </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800, color: "#475569", fontSize: "0.75rem" }}>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        fontWeight: 800,
+                        color: "#475569",
+                        fontSize: "0.75rem",
+                      }}
+                    >
                       Entries
                     </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800, color: "#475569", fontSize: "0.75rem" }}>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        fontWeight: 800,
+                        color: "#475569",
+                        fontSize: "0.75rem",
+                      }}
+                    >
                       Total KM
                     </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800, color: "#475569", fontSize: "0.75rem" }}>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        fontWeight: 800,
+                        color: "#475569",
+                        fontSize: "0.75rem",
+                      }}
+                    >
                       Total Litres
                     </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800, color: "#475569", fontSize: "0.75rem" }}>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        fontWeight: 800,
+                        color: "#475569",
+                        fontSize: "0.75rem",
+                      }}
+                    >
                       Avg km/L
                     </TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 800, color: "#475569", fontSize: "0.75rem" }}>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        fontWeight: 800,
+                        color: "#475569",
+                        fontSize: "0.75rem",
+                      }}
+                    >
                       Rating
                     </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {leaderboardData.map((stat, idx) => {
+                  {filteredLeaderboard.map((stat, idx) => {
                     const rank = idx + 1;
-                    const status = determineDriverStatus(stat.avgKmPerLitre, busStats);
+                    const status = determineDriverStatus(
+                      stat.avgKmPerLitre,
+                      busStats,
+                    );
                     const medalColors = ["#F59E0B", "#94A3B8", "#CD7F32"];
-                    const driver = drivers.find((d) => d._id === stat.driverId || d._id === stat._id);
+                    const driver = drivers.find(
+                      (d) => d._id === stat.driverId || d._id === stat._id,
+                    );
                     return (
                       <TableRow
                         key={stat.driverId || stat._id}
                         sx={{
                           "&:hover": { bgcolor: "#F8FAFC" },
-                          bgcolor: rank <= 3 ? `${medalColors[rank - 1]}08` : "transparent",
+                          bgcolor:
+                            rank <= 3
+                              ? `${medalColors[rank - 1]}08`
+                              : "transparent",
                           cursor: driver ? "pointer" : "default",
                           transition: "background 0.2s",
                         }}
@@ -687,21 +906,36 @@ export default function DriverManagementPage() {
                               width: 32,
                               height: 32,
                               borderRadius: "10px",
-                              bgcolor: rank <= 3 ? `${medalColors[rank - 1]}20` : "#F1F5F9",
+                              bgcolor:
+                                rank <= 3
+                                  ? `${medalColors[rank - 1]}20`
+                                  : "#F1F5F9",
                               fontWeight: 900,
                               fontSize: "0.85rem",
-                              color: rank <= 3 ? medalColors[rank - 1] : "#64748B",
+                              color:
+                                rank <= 3 ? medalColors[rank - 1] : "#64748B",
                             }}
                           >
                             {rank <= 3 ? (
-                              <EmojiEventsTwoTone sx={{ fontSize: 18, color: medalColors[rank - 1] }} />
+                              <EmojiEventsTwoTone
+                                sx={{
+                                  fontSize: 18,
+                                  color: medalColors[rank - 1],
+                                }}
+                              />
                             ) : (
                               rank
                             )}
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1.5,
+                            }}
+                          >
                             <Avatar
                               src={stat.photoUrl}
                               sx={{
@@ -717,25 +951,54 @@ export default function DriverManagementPage() {
                               {stat.name?.charAt(0)?.toUpperCase()}
                             </Avatar>
                             <Box>
-                              <Typography sx={{ fontWeight: 700, fontSize: "0.9rem", color: "#0F172A" }}>
+                              <Typography
+                                sx={{
+                                  fontWeight: 700,
+                                  fontSize: "0.9rem",
+                                  color: "#0F172A",
+                                }}
+                              >
                                 {stat.name}
                               </Typography>
                               {stat.mobile && (
-                                <Typography sx={{ fontSize: "0.7rem", color: "#94A3B8" }}>
+                                <Typography
+                                  sx={{ fontSize: "0.7rem", color: "#94A3B8" }}
+                                >
                                   {stat.mobile}
                                 </Typography>
                               )}
                             </Box>
                           </Box>
                         </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.85rem", color: "#475569" }}>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: "0.85rem",
+                            color: "#475569",
+                          }}
+                        >
                           {stat.entryCount}
                         </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.85rem" }}>
-                          {stat.totalKm?.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                        <TableCell
+                          align="right"
+                          sx={{ fontWeight: 700, fontSize: "0.85rem" }}
+                        >
+                          {stat.totalKm?.toLocaleString("en-IN", {
+                            maximumFractionDigits: 0,
+                          })}
                         </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.85rem", color: "#475569" }}>
-                          {stat.totalLitres?.toLocaleString("en-IN", { maximumFractionDigits: 1 })}
+                        <TableCell
+                          align="right"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: "0.85rem",
+                            color: "#475569",
+                          }}
+                        >
+                          {stat.totalLitres?.toLocaleString("en-IN", {
+                            maximumFractionDigits: 1,
+                          })}
                         </TableCell>
                         <TableCell
                           align="right"
@@ -774,14 +1037,21 @@ export default function DriverManagementPage() {
       ) : (
         /* ── CARDS VIEW ── */
         <Grid container spacing={3.5}>
-          {drivers.map((driver, index) => {
+          {filteredDrivers.map((driver, index) => {
             const stats = getDriverStats(driver._id);
             const status = stats
               ? determineDriverStatus(stats.avgKmPerLitre, busStats)
               : null;
             return (
-              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={driver._id}>
-                <Zoom in style={{ transitionDelay: `${index * 80}ms` }}>
+              <Grid
+                size={{ xs: 12, md: 6, lg: 4 }}
+                key={driver._id}
+                sx={{ display: "flex" }}
+              >
+                <Zoom
+                  in
+                  style={{ transitionDelay: `${index * 80}ms`, width: "100%" }}
+                >
                   <Paper
                     elevation={0}
                     onClick={() => handleOpenDetail(driver)}
@@ -793,6 +1063,9 @@ export default function DriverManagementPage() {
                       overflow: "hidden",
                       transition: "all 0.3s ease",
                       cursor: "pointer",
+                      width: "100%",
+                      display: "flex",
+                      flexDirection: "column",
                       "&:hover": {
                         boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.08)",
                         border: "1px solid #E2E8F0",
@@ -809,19 +1082,27 @@ export default function DriverManagementPage() {
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "flex-start",
+                        position: "relative",
                       }}
                     >
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 2 }}
+                      >
                         <Badge
                           overlap="circular"
-                          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                          anchorOrigin={{
+                            vertical: "bottom",
+                            horizontal: "right",
+                          }}
                           badgeContent={
                             <Box
                               sx={{
                                 width: 12,
                                 height: 12,
                                 borderRadius: "50%",
-                                bgcolor: getLicenseBadgeColor(driver.licenseExpiryDate),
+                                bgcolor: getLicenseBadgeColor(
+                                  driver.licenseExpiryDate,
+                                ),
                                 border: "2px solid white",
                               }}
                             />
@@ -845,10 +1126,20 @@ export default function DriverManagementPage() {
                           </Avatar>
                         </Badge>
                         <Box>
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
                             <Typography
                               variant="h6"
-                              sx={{ fontWeight: 800, color: "#0F172A", mb: 0.3 }}
+                              sx={{
+                                fontWeight: 800,
+                                color: "#0F172A",
+                                mb: 0.3,
+                              }}
                             >
                               {driver.name}
                             </Typography>
@@ -867,10 +1158,22 @@ export default function DriverManagementPage() {
                               />
                             )}
                           </Box>
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                            <PhoneTwoTone sx={{ fontSize: 14, color: "#94A3B8" }} />
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <PhoneTwoTone
+                              sx={{ fontSize: 14, color: "#94A3B8" }}
+                            />
                             <Typography
-                              sx={{ fontSize: "0.8rem", color: "#64748B", fontWeight: 600 }}
+                              sx={{
+                                fontSize: "0.8rem",
+                                color: "#64748B",
+                                fontWeight: 600,
+                              }}
                             >
                               {driver.mobile}
                             </Typography>
@@ -892,8 +1195,14 @@ export default function DriverManagementPage() {
                         <Tooltip title="Edit Driver">
                           <IconButton
                             size="small"
-                            onClick={(e) => { e.stopPropagation(); handleOpenEdit(driver); }}
-                            sx={{ color: "#8B5CF6", "&:hover": { bgcolor: "#F5F3FF" } }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(driver);
+                            }}
+                            sx={{
+                              color: "#8B5CF6",
+                              "&:hover": { bgcolor: "#F5F3FF" },
+                            }}
                           >
                             <EditTwoTone fontSize="small" />
                           </IconButton>
@@ -901,8 +1210,14 @@ export default function DriverManagementPage() {
                         <Tooltip title="Delete Driver">
                           <IconButton
                             size="small"
-                            onClick={(e) => { e.stopPropagation(); handleDelete(driver._id); }}
-                            sx={{ color: "#EF4444", "&:hover": { bgcolor: "#FEF2F2" } }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(driver._id);
+                            }}
+                            sx={{
+                              color: "#EF4444",
+                              "&:hover": { bgcolor: "#FEF2F2" },
+                            }}
                           >
                             <DeleteTwoTone fontSize="small" />
                           </IconButton>
@@ -911,7 +1226,7 @@ export default function DriverManagementPage() {
                     </Box>
 
                     {/* Performance Stats */}
-                    <Box sx={{ px: 3, mb: 3 }}>
+                    <Box sx={{ px: 3, mb: 3, flexGrow: 1 }}>
                       <Grid container spacing={2}>
                         {stats ? (
                           <>
@@ -925,14 +1240,27 @@ export default function DriverManagementPage() {
                                 }}
                               >
                                 <Typography
-                                  sx={{ fontSize: "0.6rem", color: "#3B82F6", fontWeight: 700, textTransform: "uppercase" }}
+                                  sx={{
+                                    fontSize: "0.6rem",
+                                    color: "#3B82F6",
+                                    fontWeight: 700,
+                                    textTransform: "uppercase",
+                                  }}
                                 >
                                   Total KM
                                 </Typography>
-                                <Typography sx={{ fontWeight: 900, fontSize: "1rem", color: "#1E40AF" }}>
+                                <Typography
+                                  sx={{
+                                    fontWeight: 900,
+                                    fontSize: "1rem",
+                                    color: "#1E40AF",
+                                  }}
+                                >
                                   {stats.totalKm >= 1000
                                     ? `${(stats.totalKm / 1000).toFixed(1)}k`
-                                    : stats.totalKm?.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                                    : stats.totalKm?.toLocaleString("en-IN", {
+                                        maximumFractionDigits: 0,
+                                      })}
                                 </Typography>
                               </Box>
                             </Grid>
@@ -941,14 +1269,18 @@ export default function DriverManagementPage() {
                                 sx={{
                                   p: 1.5,
                                   borderRadius: "14px",
-                                  bgcolor: status ? STATUS_CONFIG[status].bg : "#F0FDF4",
+                                  bgcolor: status
+                                    ? STATUS_CONFIG[status].bg
+                                    : "#F0FDF4",
                                   textAlign: "center",
                                 }}
                               >
                                 <Typography
                                   sx={{
                                     fontSize: "0.6rem",
-                                    color: status ? STATUS_CONFIG[status].text : "#16A34A",
+                                    color: status
+                                      ? STATUS_CONFIG[status].text
+                                      : "#16A34A",
                                     fontWeight: 700,
                                     textTransform: "uppercase",
                                   }}
@@ -959,7 +1291,9 @@ export default function DriverManagementPage() {
                                   sx={{
                                     fontWeight: 900,
                                     fontSize: "1rem",
-                                    color: status ? STATUS_CONFIG[status].text : "#166534",
+                                    color: status
+                                      ? STATUS_CONFIG[status].text
+                                      : "#166534",
                                   }}
                                 >
                                   {stats.avgKmPerLitre?.toFixed(2)}
@@ -976,11 +1310,22 @@ export default function DriverManagementPage() {
                                 }}
                               >
                                 <Typography
-                                  sx={{ fontSize: "0.6rem", color: "#7C3AED", fontWeight: 700, textTransform: "uppercase" }}
+                                  sx={{
+                                    fontSize: "0.6rem",
+                                    color: "#7C3AED",
+                                    fontWeight: 700,
+                                    textTransform: "uppercase",
+                                  }}
                                 >
                                   Fill-ups
                                 </Typography>
-                                <Typography sx={{ fontWeight: 900, fontSize: "1rem", color: "#5B21B6" }}>
+                                <Typography
+                                  sx={{
+                                    fontWeight: 900,
+                                    fontSize: "1rem",
+                                    color: "#5B21B6",
+                                  }}
+                                >
                                   {stats.entryCount}
                                 </Typography>
                               </Box>
@@ -996,7 +1341,13 @@ export default function DriverManagementPage() {
                                 textAlign: "center",
                               }}
                             >
-                              <Typography sx={{ fontSize: "0.8rem", color: "#94A3B8", fontWeight: 600 }}>
+                              <Typography
+                                sx={{
+                                  fontSize: "0.8rem",
+                                  color: "#94A3B8",
+                                  fontWeight: 600,
+                                }}
+                              >
                                 No fuel data for this period
                               </Typography>
                             </Box>
@@ -1017,9 +1368,18 @@ export default function DriverManagementPage() {
                         alignItems: "center",
                       }}
                     >
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         <BadgeTwoTone sx={{ fontSize: 16, color: "#94A3B8" }} />
-                        <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", fontFamily: "monospace" }}>
+                        <Typography
+                          sx={{
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                            color: "#64748B",
+                            fontFamily: "monospace",
+                          }}
+                        >
                           {driver.licenseNumber}
                         </Typography>
                       </Box>
@@ -1099,12 +1459,17 @@ export default function DriverManagementPage() {
                 </Avatar>
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="h5" sx={{ fontWeight: 900, color: "#0F172A" }}>
+                    <Typography
+                      variant="h5"
+                      sx={{ fontWeight: 900, color: "#0F172A" }}
+                    >
                       {detailDriver.name}
                     </Typography>
                     {(() => {
                       const s = getDriverStats(detailDriver._id);
-                      const status = s ? determineDriverStatus(s.avgKmPerLitre, busStats) : null;
+                      const status = s
+                        ? determineDriverStatus(s.avgKmPerLitre, busStats)
+                        : null;
                       return status ? (
                         <Chip
                           label={STATUS_CONFIG[status].label}
@@ -1122,7 +1487,8 @@ export default function DriverManagementPage() {
                     })()}
                   </Box>
                   <Typography sx={{ fontSize: "0.85rem", color: "#64748B" }}>
-                    {detailDriver.mobile} · License: {detailDriver.licenseNumber}
+                    {detailDriver.mobile} · License:{" "}
+                    {detailDriver.licenseNumber}
                   </Typography>
                 </Box>
               </Box>
@@ -1138,41 +1504,125 @@ export default function DriverManagementPage() {
                 return (
                   <Grid container spacing={2} sx={{ mb: 3 }}>
                     <Grid size={{ xs: 6, sm: 3 }}>
-                      <Box sx={{ p: 2, borderRadius: "16px", bgcolor: "#EFF6FF", textAlign: "center" }}>
-                        <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, color: "#3B82F6", textTransform: "uppercase" }}>
+                      <Box
+                        sx={{
+                          p: 2,
+                          borderRadius: "16px",
+                          bgcolor: "#EFF6FF",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            color: "#3B82F6",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Total KM
                         </Typography>
-                        <Typography sx={{ fontWeight: 900, fontSize: "1.3rem", color: "#1E40AF" }}>
-                          {s.totalKm?.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                        <Typography
+                          sx={{
+                            fontWeight: 900,
+                            fontSize: "1.3rem",
+                            color: "#1E40AF",
+                          }}
+                        >
+                          {s.totalKm?.toLocaleString("en-IN", {
+                            maximumFractionDigits: 0,
+                          })}
                         </Typography>
                       </Box>
                     </Grid>
                     <Grid size={{ xs: 6, sm: 3 }}>
-                      <Box sx={{ p: 2, borderRadius: "16px", bgcolor: "#F0FDF4", textAlign: "center" }}>
-                        <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, color: "#16A34A", textTransform: "uppercase" }}>
+                      <Box
+                        sx={{
+                          p: 2,
+                          borderRadius: "16px",
+                          bgcolor: "#F0FDF4",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            color: "#16A34A",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Avg km/L
                         </Typography>
-                        <Typography sx={{ fontWeight: 900, fontSize: "1.3rem", color: "#166534" }}>
+                        <Typography
+                          sx={{
+                            fontWeight: 900,
+                            fontSize: "1.3rem",
+                            color: "#166534",
+                          }}
+                        >
                           {s.avgKmPerLitre?.toFixed(2)}
                         </Typography>
                       </Box>
                     </Grid>
                     <Grid size={{ xs: 6, sm: 3 }}>
-                      <Box sx={{ p: 2, borderRadius: "16px", bgcolor: "#F5F3FF", textAlign: "center" }}>
-                        <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, color: "#7C3AED", textTransform: "uppercase" }}>
+                      <Box
+                        sx={{
+                          p: 2,
+                          borderRadius: "16px",
+                          bgcolor: "#F5F3FF",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            color: "#7C3AED",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Total Litres
                         </Typography>
-                        <Typography sx={{ fontWeight: 900, fontSize: "1.3rem", color: "#5B21B6" }}>
-                          {s.totalLitres?.toLocaleString("en-IN", { maximumFractionDigits: 1 })}
+                        <Typography
+                          sx={{
+                            fontWeight: 900,
+                            fontSize: "1.3rem",
+                            color: "#5B21B6",
+                          }}
+                        >
+                          {s.totalLitres?.toLocaleString("en-IN", {
+                            maximumFractionDigits: 1,
+                          })}
                         </Typography>
                       </Box>
                     </Grid>
                     <Grid size={{ xs: 6, sm: 3 }}>
-                      <Box sx={{ p: 2, borderRadius: "16px", bgcolor: "#ECFDF5", textAlign: "center" }}>
-                        <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, color: "#059669", textTransform: "uppercase" }}>
+                      <Box
+                        sx={{
+                          p: 2,
+                          borderRadius: "16px",
+                          bgcolor: "#ECFDF5",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            color: "#059669",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Fill-ups
                         </Typography>
-                        <Typography sx={{ fontWeight: 900, fontSize: "1.3rem", color: "#065F46" }}>
+                        <Typography
+                          sx={{
+                            fontWeight: 900,
+                            fontSize: "1.3rem",
+                            color: "#065F46",
+                          }}
+                        >
                           {s.entryCount}
                         </Typography>
                       </Box>
@@ -1215,22 +1665,49 @@ export default function DriverManagementPage() {
                           }}
                         >
                           <Box>
-                            <Typography sx={{ fontWeight: 700, fontSize: "0.85rem", color: "#0F172A" }}>
+                            <Typography
+                              sx={{
+                                fontWeight: 700,
+                                fontSize: "0.85rem",
+                                color: "#0F172A",
+                              }}
+                            >
                               {b.numberPlate}
                             </Typography>
-                            <Typography sx={{ fontSize: "0.7rem", color: "#94A3B8" }}>
+                            <Typography
+                              sx={{ fontSize: "0.7rem", color: "#94A3B8" }}
+                            >
                               {b.modelName} · {b.entryCount} entries
                             </Typography>
                           </Box>
                           <Box sx={{ textAlign: "right" }}>
-                            <Typography sx={{ fontWeight: 900, fontSize: "1rem", color: "#0F172A" }}>
+                            <Typography
+                              sx={{
+                                fontWeight: 900,
+                                fontSize: "1rem",
+                                color: "#0F172A",
+                              }}
+                            >
                               {b.avgKmPerLitre.toFixed(2)}
-                              <Box component="span" sx={{ fontSize: "0.65rem", fontWeight: 600, ml: 0.3, color: "#64748B" }}>
+                              <Box
+                                component="span"
+                                sx={{
+                                  fontSize: "0.65rem",
+                                  fontWeight: 600,
+                                  ml: 0.3,
+                                  color: "#64748B",
+                                }}
+                              >
                                 km/L
                               </Box>
                             </Typography>
-                            <Typography sx={{ fontSize: "0.7rem", color: "#64748B" }}>
-                              {b.totalKm.toLocaleString("en-IN", { maximumFractionDigits: 0 })} km
+                            <Typography
+                              sx={{ fontSize: "0.7rem", color: "#64748B" }}
+                            >
+                              {b.totalKm.toLocaleString("en-IN", {
+                                maximumFractionDigits: 0,
+                              })}{" "}
+                              km
                             </Typography>
                           </Box>
                         </Paper>
@@ -1263,7 +1740,14 @@ export default function DriverManagementPage() {
                   <CircularProgress size={36} sx={{ color: "#7C3AED" }} />
                 </Box>
               ) : detailEntries.length === 0 ? (
-                <Box sx={{ p: 6, textAlign: "center", bgcolor: "#F8FAFC", borderRadius: "16px" }}>
+                <Box
+                  sx={{
+                    p: 6,
+                    textAlign: "center",
+                    bgcolor: "#F8FAFC",
+                    borderRadius: "16px",
+                  }}
+                >
                   <Typography sx={{ color: "#94A3B8", fontWeight: 600 }}>
                     No fuel entries found for this driver.
                   </Typography>
@@ -1277,47 +1761,156 @@ export default function DriverManagementPage() {
                   <Table size="small">
                     <TableHead>
                       <TableRow sx={{ bgcolor: "#F8FAFC" }}>
-                        <TableCell sx={{ fontWeight: 800, fontSize: "0.7rem", color: "#475569" }}>Date</TableCell>
-                        <TableCell sx={{ fontWeight: 800, fontSize: "0.7rem", color: "#475569" }}>Receipt</TableCell>
-                        <TableCell sx={{ fontWeight: 800, fontSize: "0.7rem", color: "#475569" }}>Bus</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 800, fontSize: "0.7rem", color: "#475569" }}>KM</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 800, fontSize: "0.7rem", color: "#475569" }}>Litres</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 800, fontSize: "0.7rem", color: "#475569" }}>km/L</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 800, fontSize: "0.7rem", color: "#475569" }}>Cost (₹)</TableCell>
+                        <TableCell
+                          sx={{
+                            fontWeight: 800,
+                            fontSize: "0.7rem",
+                            color: "#475569",
+                          }}
+                        >
+                          Date
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            fontWeight: 800,
+                            fontSize: "0.7rem",
+                            color: "#475569",
+                          }}
+                        >
+                          Receipt
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            fontWeight: 800,
+                            fontSize: "0.7rem",
+                            color: "#475569",
+                          }}
+                        >
+                          Bus
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            fontWeight: 800,
+                            fontSize: "0.7rem",
+                            color: "#475569",
+                          }}
+                        >
+                          KM
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            fontWeight: 800,
+                            fontSize: "0.7rem",
+                            color: "#475569",
+                          }}
+                        >
+                          Litres
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            fontWeight: 800,
+                            fontSize: "0.7rem",
+                            color: "#475569",
+                          }}
+                        >
+                          km/L
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            fontWeight: 800,
+                            fontSize: "0.7rem",
+                            color: "#475569",
+                          }}
+                        >
+                          Cost (₹)
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {detailEntries.map((entry) => {
                         const sc = STATUS_CONFIG[entry.status];
                         return (
-                          <TableRow key={entry._id} sx={{ "&:hover": { bgcolor: "#F8FAFC" } }}>
-                            <TableCell sx={{ fontWeight: 600, fontSize: "0.8rem" }}>
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                {new Date(entry.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                          <TableRow
+                            key={entry._id}
+                            sx={{ "&:hover": { bgcolor: "#F8FAFC" } }}
+                          >
+                            <TableCell
+                              sx={{ fontWeight: 600, fontSize: "0.8rem" }}
+                            >
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                }}
+                              >
+                                {new Date(entry.date).toLocaleDateString(
+                                  "en-IN",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "2-digit",
+                                  },
+                                )}
                                 {entry.notes && (
                                   <Tooltip title={entry.notes} arrow>
-                                    <WarningAmberRounded sx={{ fontSize: 14, color: "#F59E0B" }} />
+                                    <WarningAmberRounded
+                                      sx={{ fontSize: 14, color: "#F59E0B" }}
+                                    />
                                   </Tooltip>
                                 )}
                               </Box>
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 600, fontSize: "0.8rem", fontFamily: "monospace", color: "#475569" }}>
+                            <TableCell
+                              sx={{
+                                fontWeight: 600,
+                                fontSize: "0.8rem",
+                                fontFamily: "monospace",
+                                color: "#475569",
+                              }}
+                            >
                               #{entry.receiptNumber}
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 600, fontSize: "0.8rem" }}>
+                            <TableCell
+                              sx={{ fontWeight: 600, fontSize: "0.8rem" }}
+                            >
                               {entry.busId?.numberPlate || "—"}
                             </TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.8rem" }}>
+                            <TableCell
+                              align="right"
+                              sx={{ fontWeight: 700, fontSize: "0.8rem" }}
+                            >
                               {entry.kmTravelled?.toLocaleString() || "—"}
                             </TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.8rem" }}>
+                            <TableCell
+                              align="right"
+                              sx={{ fontWeight: 700, fontSize: "0.8rem" }}
+                            >
                               {entry.litresFilled}
                             </TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 800, fontSize: "0.8rem", color: sc?.text || "#475569" }}>
-                              {entry.averageKmPerLitre ? entry.averageKmPerLitre.toFixed(2) : "—"}
+                            <TableCell
+                              align="right"
+                              sx={{
+                                fontWeight: 800,
+                                fontSize: "0.8rem",
+                                color: sc?.text || "#475569",
+                              }}
+                            >
+                              {entry.averageKmPerLitre
+                                ? entry.averageKmPerLitre.toFixed(2)
+                                : "—"}
                             </TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.8rem" }}>
-                              {entry.fuelCost ? `₹${entry.fuelCost.toLocaleString()}` : "—"}
+                            <TableCell
+                              align="right"
+                              sx={{ fontWeight: 700, fontSize: "0.8rem" }}
+                            >
+                              {entry.fuelCost
+                                ? `₹${entry.fuelCost.toLocaleString()}`
+                                : "—"}
                             </TableCell>
                           </TableRow>
                         );
@@ -1450,10 +2043,16 @@ export default function DriverManagementPage() {
                   label="Driver Name"
                   placeholder="Full name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   InputProps={{
                     sx: { borderRadius: "12px" },
-                    startAdornment: <PersonTwoTone sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }} />,
+                    startAdornment: (
+                      <PersonTwoTone
+                        sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }}
+                      />
+                    ),
                   }}
                 />
               </Grid>
@@ -1464,22 +2063,46 @@ export default function DriverManagementPage() {
                   label="Mobile Number"
                   placeholder="10-digit number"
                   value={formData.mobile}
-                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, mobile: e.target.value })
+                  }
                   InputProps={{
                     sx: { borderRadius: "12px" },
-                    startAdornment: <PhoneTwoTone sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }} />,
+                    startAdornment: (
+                      <PhoneTwoTone
+                        sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }}
+                      />
+                    ),
                   }}
                 />
               </Grid>
 
               <Grid size={{ xs: 12 }}>
                 <Divider sx={{ my: 1 }}>
-                  <Chip label="LICENSE DETAILS" size="small" sx={{ fontSize: "0.65rem", fontWeight: 750, color: "#64748B", bgcolor: "#F1F5F9", px: 1 }} />
+                  <Chip
+                    label="LICENSE DETAILS"
+                    size="small"
+                    sx={{
+                      fontSize: "0.65rem",
+                      fontWeight: 750,
+                      color: "#64748B",
+                      bgcolor: "#F1F5F9",
+                      px: 1,
+                    }}
+                  />
                 </Divider>
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                <InputLabel sx={{ mb: 0.5, fontSize: "0.75rem", color: "#64748B", fontWeight: 600, textTransform: "uppercase" }}>
+                <InputLabel
+                  sx={{
+                    mb: 0.5,
+                    fontSize: "0.75rem",
+                    color: "#64748B",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                  }}
+                >
                   License Number
                 </InputLabel>
                 <TextField
@@ -1487,15 +2110,29 @@ export default function DriverManagementPage() {
                   required
                   placeholder="e.g. GJ01 20240000001"
                   value={formData.licenseNumber}
-                  onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, licenseNumber: e.target.value })
+                  }
                   InputProps={{
                     sx: { borderRadius: "12px" },
-                    startAdornment: <BadgeTwoTone sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }} />,
+                    startAdornment: (
+                      <BadgeTwoTone
+                        sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }}
+                      />
+                    ),
                   }}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <InputLabel sx={{ mb: 0.5, fontSize: "0.75rem", color: "#64748B", fontWeight: 600, textTransform: "uppercase" }}>
+                <InputLabel
+                  sx={{
+                    mb: 0.5,
+                    fontSize: "0.75rem",
+                    color: "#64748B",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                  }}
+                >
                   License Expiry Date
                 </InputLabel>
                 <TextField
@@ -1504,17 +2141,36 @@ export default function DriverManagementPage() {
                   type="date"
                   InputLabelProps={{ shrink: true }}
                   value={formData.licenseExpiryDate}
-                  onChange={(e) => setFormData({ ...formData, licenseExpiryDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      licenseExpiryDate: e.target.value,
+                    })
+                  }
                   InputProps={{
                     sx: { borderRadius: "12px" },
-                    startAdornment: <CalendarTodayTwoTone sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }} />,
+                    startAdornment: (
+                      <CalendarTodayTwoTone
+                        sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }}
+                      />
+                    ),
                   }}
                 />
               </Grid>
 
               <Grid size={{ xs: 12 }}>
                 <Divider sx={{ my: 1 }}>
-                  <Chip label="BANK DETAILS (OPTIONAL)" size="small" sx={{ fontSize: "0.65rem", fontWeight: 750, color: "#64748B", bgcolor: "#F1F5F9", px: 1 }} />
+                  <Chip
+                    label="BANK DETAILS (OPTIONAL)"
+                    size="small"
+                    sx={{
+                      fontSize: "0.65rem",
+                      fontWeight: 750,
+                      color: "#64748B",
+                      bgcolor: "#F1F5F9",
+                      px: 1,
+                    }}
+                  />
                 </Divider>
               </Grid>
 
@@ -1524,10 +2180,19 @@ export default function DriverManagementPage() {
                   label="Bank Account Number"
                   placeholder="Account number"
                   value={formData.bankAccountNumber}
-                  onChange={(e) => setFormData({ ...formData, bankAccountNumber: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      bankAccountNumber: e.target.value,
+                    })
+                  }
                   InputProps={{
                     sx: { borderRadius: "12px" },
-                    startAdornment: <CreditCardTwoTone sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }} />,
+                    startAdornment: (
+                      <CreditCardTwoTone
+                        sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }}
+                      />
+                    ),
                   }}
                 />
               </Grid>
@@ -1537,10 +2202,16 @@ export default function DriverManagementPage() {
                   label="IFSC Code"
                   placeholder="e.g. SBIN0001234"
                   value={formData.ifscCode}
-                  onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, ifscCode: e.target.value })
+                  }
                   InputProps={{
                     sx: { borderRadius: "12px" },
-                    startAdornment: <AccountBalanceTwoTone sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }} />,
+                    startAdornment: (
+                      <AccountBalanceTwoTone
+                        sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }}
+                      />
+                    ),
                   }}
                 />
               </Grid>
@@ -1549,7 +2220,13 @@ export default function DriverManagementPage() {
           <DialogActions sx={{ p: 3, pt: 0 }}>
             <Button
               onClick={() => setOpenDialog(false)}
-              sx={{ color: "#64748B", textTransform: "none", fontWeight: 600, borderRadius: "12px", px: 3 }}
+              sx={{
+                color: "#64748B",
+                textTransform: "none",
+                fontWeight: 600,
+                borderRadius: "12px",
+                px: 3,
+              }}
             >
               Cancel
             </Button>

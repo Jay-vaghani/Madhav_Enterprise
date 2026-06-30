@@ -7,13 +7,17 @@ import {
   InputLabel,
   CircularProgress,
   Grid,
+  TextField,
+  InputAdornment,
+  Button,
 } from "@mui/material";
 import {
   PersonAddAltOutlined,
   AccountBalanceWalletOutlined,
   CurrencyRupeeOutlined,
   TrendingUpOutlined,
-  PeopleAltOutlined,
+  CalendarTodayOutlined,
+  SearchOutlined,
 } from "@mui/icons-material";
 import {
   BarChart,
@@ -223,6 +227,19 @@ export default function ReportsPage() {
   const [shift, setShift] = useState("");
   const [department, setDepartment] = useState("");
 
+  // ── Date range for Collection Insights (defaults: start of month → today) ──
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const startOfMonthStr = (() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  // ── Date-wise Collection section — single date, defaults to today ──
+  const [dwDate, setDwDate] = useState(todayStr);
+  const [dwLoading, setDwLoading] = useState(false);
+  const [dwStats, setDwStats] = useState(null);
+
   // ── Data ────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
@@ -250,12 +267,46 @@ export default function ReportsPage() {
     }
   }, [token, period, year, shift, department]);
 
+  // ── Date-wise Collection fetch (independent) ─────────────────
+  const loadDatewiseCollection = useCallback(async () => {
+    if (!token) return;
+    setDwLoading(true);
+    try {
+      const res = await fetchAnalytics(token, {
+        fromDate: dwDate,
+        toDate: dwDate,
+      });
+      if (res.success) setDwStats(res.data.stats);
+    } catch (err) {
+      console.error("Date-wise collection fetch error:", err);
+    } finally {
+      setDwLoading(false);
+    }
+  }, [token, dwDate]);
+
+  useEffect(() => { loadDatewiseCollection(); }, [loadDatewiseCollection]);
+
   useEffect(() => {
     loadAnalytics();
   }, [loadAnalytics]);
 
   // ── Chart bar max for highlight ─────────────────────────────
   const maxCount = Math.max(...trends.map((t) => t.count), 0);
+
+  // ── Revenue Percentages ─────────────────────────────────────
+  let onlinePct = 0;
+  let cashPct = 0;
+  if (stats) {
+    const onlineTotal = (stats.accountA || 0) + (stats.accountB || 0);
+    const cashTotal = stats.totalCash || 0;
+    const totalRev = stats.netRevenue || onlineTotal + cashTotal;
+    if (totalRev > 0) {
+      onlinePct = ((onlineTotal / totalRev) * 100)
+        .toFixed(1)
+        .replace(/\.0$/, "");
+      cashPct = ((cashTotal / totalRev) * 100).toFixed(1).replace(/\.0$/, "");
+    }
+  }
 
   return (
     <Box sx={{ maxWidth: 1200 }}>
@@ -460,11 +511,110 @@ export default function ReportsPage() {
                     Combined institutional collections
                   </p>
                 </Box>
+
+                <Box sx={{ mt: 3.5 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 1.2,
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          bgcolor: "#38BDF8",
+                          boxShadow: "0 0 8px rgba(56,189,248,0.5)",
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          letterSpacing: "0.03em",
+                          color: "rgba(255,255,255,0.8)",
+                        }}
+                      >
+                        ONLINE
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.95rem",
+                          fontWeight: 800,
+                          color: "#fff",
+                          ml: 0.5,
+                        }}
+                      >
+                        {onlinePct}%
+                      </span>
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <span
+                        style={{
+                          fontSize: "0.95rem",
+                          fontWeight: 800,
+                          color: "#fff",
+                          mr: 0.5,
+                        }}
+                      >
+                        {cashPct}%
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          letterSpacing: "0.03em",
+                          color: "rgba(255,255,255,0.8)",
+                        }}
+                      >
+                        CASH
+                      </span>
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          bgcolor: "#34D399",
+                          boxShadow: "0 0 8px rgba(52,211,153,0.5)",
+                        }}
+                      />
+                    </Box>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      width: "100%",
+                      height: 6,
+                      bgcolor: "rgba(0,0,0,0.25)",
+                      borderRadius: 3,
+                      display: "flex",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: `${onlinePct}%`,
+                        background: "#38BDF8",
+                        transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        width: `${cashPct}%`,
+                        background: "#34D399",
+                        transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
+                    />
+                  </Box>
+                </Box>
               </Box>
             </Grid>
           </Grid>
 
-          {/* ── Collection Insights Breakdown ── */}
+          {/* ── Collection Insights Breakdown (all-time) ── */}
           <Box sx={{ mb: 4 }}>
             <Box
               sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}
@@ -584,6 +734,7 @@ export default function ReportsPage() {
               borderRadius: "14px",
               border: "1px solid #E2E8F0",
               p: 3,
+              mb: 4,
             }}
           >
             {/* Chart header */}
@@ -727,6 +878,224 @@ export default function ReportsPage() {
                 </BarChart>
               </ResponsiveContainer>
             )}
+          </Box>
+
+          {/* ══════════════════════════════════════════════════════
+               DATE-WISE COLLECTION — completely separate section
+          ══════════════════════════════════════════════════════ */}
+          <Box
+            sx={{
+              bgcolor: "#FFFFFF",
+              borderRadius: "16px",
+              border: "1px solid #E2E8F0",
+              p: 3,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+            }}
+          >
+            {/* Section header */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: { xs: "flex-start", sm: "center" },
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 2,
+                mb: 3,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1 }}>
+                <Box
+                  sx={{
+                    width: 4,
+                    height: 18,
+                    bgcolor: "#F59E0B",
+                    borderRadius: 1,
+                  }}
+                />
+                <Box>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: "0.95rem",
+                      fontWeight: 800,
+                      color: "#1E293B",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    Date-wise Collection
+                  </h3>
+                  <p style={{ margin: "2px 0 0", fontSize: "0.75rem", color: "#94A3B8", fontWeight: 500 }}>
+                    View Account C, Account H & Cash collected in any date range
+                  </p>
+                </Box>
+              </Box>
+
+              {/* Single date picker */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <TextField
+                  type="date"
+                  size="small"
+                  label="Date"
+                  value={dwDate}
+                  onChange={(e) => setDwDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <CalendarTodayOutlined sx={{ fontSize: 14, color: "#94A3B8" }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    width: 175,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "10px",
+                      fontSize: "0.82rem",
+                      bgcolor: "#FFFBEB",
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: "#FDE68A" },
+                      "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#F59E0B" },
+                    },
+                    "& .MuiInputLabel-root": { fontSize: "0.75rem", fontWeight: 600, color: "#92400E" },
+                  }}
+                />
+              </Box>
+            </Box>
+
+            {/* Results */}
+            {dwLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                <CircularProgress size={32} thickness={4} sx={{ color: "#F59E0B" }} />
+              </Box>
+            ) : dwStats ? (
+              <>
+                {/* Date label badge */}
+                <Box sx={{ mb: 2.5 }}>
+                  <Box
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 1,
+                      bgcolor: "#FFFBEB",
+                      border: "1px solid #FDE68A",
+                      borderRadius: "8px",
+                      px: 1.5,
+                      py: 0.6,
+                    }}
+                  >
+                    <CalendarTodayOutlined sx={{ fontSize: 13, color: "#D97706" }} />
+                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#92400E" }}>
+                      {new Date(dwDate + "T00:00:00").toLocaleDateString("en-IN", {
+                        weekday: "long",
+                        day: "2-digit",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </Box>
+                </Box>
+
+                {/* 4 metric cards: 3 sources + total */}
+                <Grid container spacing={2}>
+                  {[
+                    {
+                      label: "Account C",
+                      val: dwStats.rangedAccountA,
+                      color: "#3B82F6",
+                      bg: "linear-gradient(135deg,#EFF6FF,#DBEAFE)",
+                      border: "#BFDBFE",
+                      icon: AccountBalanceWalletOutlined,
+                    },
+                    {
+                      label: "Account H",
+                      val: dwStats.rangedAccountB,
+                      color: "#8B5CF6",
+                      bg: "linear-gradient(135deg,#F5F3FF,#EDE9FE)",
+                      border: "#DDD6FE",
+                      icon: AccountBalanceWalletOutlined,
+                    },
+                    {
+                      label: "Cash",
+                      val: dwStats.rangedTotalCash,
+                      color: "#10B981",
+                      bg: "linear-gradient(135deg,#ECFDF5,#D1FAE5)",
+                      border: "#A7F3D0",
+                      icon: CurrencyRupeeOutlined,
+                    },
+                    {
+                      label: "Total Collected",
+                      val: dwStats.rangedNetRevenue,
+                      color: "#F59E0B",
+                      bg: "linear-gradient(135deg,#FFFBEB,#FEF3C7)",
+                      border: "#FDE68A",
+                      icon: TrendingUpOutlined,
+                      isTotalCard: true,
+                    },
+                  ].map((item) => (
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }} key={item.label}>
+                      <Box
+                        sx={{
+                          background: item.bg,
+                          border: `1.5px solid ${item.border}`,
+                          borderRadius: "14px",
+                          p: 2.5,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 2,
+                          transition: "all 0.2s ease",
+                          "&:hover": {
+                            transform: "translateY(-2px)",
+                            boxShadow: `0 6px 20px ${item.color}20`,
+                          },
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 46,
+                            height: 46,
+                            borderRadius: "12px",
+                            bgcolor: `${item.color}18`,
+                            border: `1px solid ${item.color}30`,
+                            color: item.color,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <item.icon sx={{ fontSize: 22 }} />
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "0.62rem",
+                              fontWeight: 700,
+                              color: item.color,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.08em",
+                              marginBottom: 2,
+                            }}
+                          >
+                            {item.label}
+                          </p>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: item.isTotalCard ? "1.4rem" : "1.25rem",
+                              fontWeight: 800,
+                              color: "#1E293B",
+                              lineHeight: 1.1,
+                            }}
+                          >
+                            {fmtCurrency(item.val)}
+                          </p>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </>
+            ) : null}
           </Box>
         </>
       )}

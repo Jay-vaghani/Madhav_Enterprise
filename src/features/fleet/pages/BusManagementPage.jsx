@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Box,
   Paper,
@@ -18,6 +18,8 @@ import {
   Fade,
   Divider,
   Avatar,
+  InputAdornment,
+  InputLabel,
   Table,
   TableBody,
   TableCell,
@@ -46,6 +48,8 @@ import {
   ConfirmationNumberTwoTone,
   PersonTwoTone,
   WarningAmberRounded,
+  SearchOutlined,
+  CloseRounded,
 } from "@mui/icons-material";
 import { useAuth } from "../../admin/context/AuthContext";
 import {
@@ -73,6 +77,9 @@ export default function BusManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Frontend search
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -120,6 +127,20 @@ export default function BusManagementPage() {
   const getBusStats = (busId) => {
     return busStats.find((s) => s.busId === busId || s._id === busId) || null;
   };
+
+  // Frontend-filtered list (model name OR number plate, case-insensitive)
+  const q = searchQuery.trim().toLowerCase();
+  const filteredBuses = useMemo(
+    () =>
+      q
+        ? buses.filter(
+            (b) =>
+              b.modelName?.toLowerCase().includes(q) ||
+              b.numberPlate?.toLowerCase().includes(q),
+          )
+        : buses,
+    [buses, q],
+  );
 
   // Open bus detail dialog
   const handleOpenDetail = async (bus) => {
@@ -311,7 +332,74 @@ export default function BusManagementPage() {
         </Button>
       </Box>
 
-      {/* Notifications */}
+      {/* Search Bar */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 4,
+          borderRadius: "20px",
+          border: "1px solid #F1F5F9",
+          bgcolor: "#F8FAFC",
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+        }}
+      >
+        <Box sx={{ flex: 1, maxWidth: 380 }}>
+          <InputLabel sx={{ color: "#1E293B", fontWeight: 600, mb: 0.5, fontSize: "0.8rem" }}>
+            Search Bus
+          </InputLabel>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search by model name or number plate…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchOutlined sx={{ fontSize: 18, color: "#94A3B8" }} />
+                </InputAdornment>
+              ),
+              endAdornment: searchQuery ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setSearchQuery("")}
+                    sx={{ color: "#94A3B8" }}
+                  >
+                    <CloseRounded sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "12px",
+                bgcolor: "white",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#E2E8F0" },
+                "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#CBD5E1" },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#2563EB" },
+              },
+            }}
+          />
+        </Box>
+        {searchQuery && (
+          <Chip
+            label={`${filteredBuses.length} of ${buses.length} buses`}
+            size="small"
+            sx={{
+              bgcolor: "#EFF6FF",
+              color: "#2563EB",
+              fontWeight: 700,
+              borderRadius: "8px",
+              mt: 2.5,
+            }}
+          />
+        )}
+      </Paper>
+
       <Fade in={!!error || !!success}>
         <Box sx={{ mb: 4 }}>
           {error && (
@@ -351,7 +439,7 @@ export default function BusManagementPage() {
             sx={{ color: "#2563EB", opacity: 0.8 }}
           />
         </Box>
-      ) : buses.length === 0 ? (
+      ) : filteredBuses.length === 0 ? (
         <Box
           sx={{
             p: 10,
@@ -372,33 +460,56 @@ export default function BusManagementPage() {
               boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
             }}
           >
-            <DirectionsBusTwoTone sx={{ fontSize: 64 }} />
+            {searchQuery ? (
+              <SearchOutlined sx={{ fontSize: 64 }} />
+            ) : (
+              <DirectionsBusTwoTone sx={{ fontSize: 64 }} />
+            )}
           </Box>
           <Typography
             variant="h5"
             sx={{ fontWeight: 700, color: "#475569", mb: 1 }}
           >
-            No Buses Registered
+            {searchQuery
+              ? `No buses matching "${searchQuery}"`
+              : "No Buses Registered"}
           </Typography>
           <Typography sx={{ color: "#94A3B8", mb: 4 }}>
-            Start by adding your first bus to the fleet.
+            {searchQuery
+              ? "Try a different name or number plate, or clear the search."
+              : "Start by adding your first bus to the fleet."}
           </Typography>
-          <Button
-            variant="outlined"
-            onClick={handleOpenNew}
-            sx={{
-              borderRadius: "10px",
-              textTransform: "none",
-              fontWeight: 600,
-              px: 4,
-            }}
-          >
-            Register Bus
-          </Button>
+          {searchQuery ? (
+            <Button
+              variant="outlined"
+              onClick={() => setSearchQuery("")}
+              sx={{
+                borderRadius: "10px",
+                textTransform: "none",
+                fontWeight: 600,
+                px: 4,
+              }}
+            >
+              Clear Search
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              onClick={handleOpenNew}
+              sx={{
+                borderRadius: "10px",
+                textTransform: "none",
+                fontWeight: 600,
+                px: 4,
+              }}
+            >
+              Register Bus
+            </Button>
+          )}
         </Box>
       ) : (
         <Grid container spacing={3.5}>
-          {buses.map((bus, index) => {
+          {filteredBuses.map((bus, index) => {
             const stats = getBusStats(bus._id);
             return (
               <Grid size={{ xs: 12, md: 6, lg: 4 }} key={bus._id}>

@@ -218,7 +218,7 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
     transform: translate(-50%, -50%);
     width: 90mm;
     height: 90mm;
-    background-image: url('/logo.svg');
+    background-image: url('https://ik.imagekit.io/JayVaghani2002/Madhav.svg?updatedAt=1764781255491');
     background-size: contain;
     background-repeat: no-repeat;
     opacity: 0.2;

@@ -25,59 +25,8 @@ import {
   Gavel,
   Shield,
 } from "@mui/icons-material";
-import imageCompression from "browser-image-compression";
 import { useRegistration, YEARS } from "../context/RegistrationContext";
 import ImageCropModal from "../../../components/ImageCropModal";
-
-async function compressToWebpUnder50KB(base64Input, maxKB = 50) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const MAX_DIM = 600;
-      let { width, height } = img;
-      if (width > MAX_DIM || height > MAX_DIM) {
-        if (width >= height) {
-          height = Math.round((height * MAX_DIM) / width);
-          width = MAX_DIM;
-        } else {
-          width = Math.round((width * MAX_DIM) / height);
-          height = MAX_DIM;
-        }
-      }
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, width, height);
-
-      let quality = 0.85;
-      const tryEncode = () => {
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error("Canvas toBlob failed"));
-              return;
-            }
-            if (blob.size <= maxKB * 1024 || quality <= 0.05) {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
-            } else {
-              quality = Math.max(0.05, quality - 0.1);
-              tryEncode();
-            }
-          },
-          "image/webp",
-          quality,
-        );
-      };
-      tryEncode();
-    };
-    img.onerror = reject;
-    img.src = base64Input;
-  });
-}
 
 // ── T&C content ────────────────────────────────────────────────
 const TERMS = [
@@ -496,34 +445,23 @@ export default function FinalReviewStep() {
     setCropOpen(true);
   }, []);
 
-  // ── Step 2: After crop → compress if needed → save ─────────
+  // ── Step 2: After crop+compress → save directly (modal handles compression) ──
   const handleCropComplete = useCallback(
-    async (croppedBase64) => {
+    (compressedBase64) => {
       setCropOpen(false);
       setCropSrc(null);
-      setCompressing(true);
 
-      try {
-        const finalBase64 = await compressToWebpUnder50KB(croppedBase64, 50);
-        
-        // Calculate approx size
-        const finalSizeMB = (finalBase64.length * 0.75 / 1024 / 1024).toFixed(3);
+      const finalSizeMB = (compressedBase64.length * 0.75 / 1024 / 1024).toFixed(3);
 
-        setPhoto({
-          url: finalBase64,
-          name: rawFile?.name || "photo.webp",
-          originalSize: (rawFile?.size ? (rawFile.size / 1048576).toFixed(1) : "0.0"),
-          finalSize: finalSizeMB,
-          wasCompressed: true,
-          base64: finalBase64,
-        });
-        
-        updateFormData({ photoBase64: finalBase64 });
-      } catch (err) {
-        console.error("Compression failed:", err);
-      } finally {
-        setCompressing(false);
-      }
+      setPhoto({
+        url: compressedBase64,
+        name: rawFile?.name || "photo.webp",
+        originalSize: rawFile?.size ? (rawFile.size / 1048576).toFixed(1) : "0.0",
+        finalSize: finalSizeMB,
+        wasCompressed: true,
+      });
+
+      updateFormData({ photoBase64: compressedBase64 });
     },
     [rawFile, updateFormData],
   );
