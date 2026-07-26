@@ -22,6 +22,8 @@ import {
   PersonOutlined,
   StackedBarChartOutlined,
   WarningAmber,
+  DescriptionOutlined,
+  BuildOutlined,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -46,12 +48,7 @@ const NAV_ITEMS = [
     icon: WarningAmber,
     active: false,
   },
-  {
-    id: "rejected",
-    label: "Rejected Students",
-    icon: DoNotDisturbAltOutlined,
-    active: false,
-  },
+
   {
     id: "reports",
     label: "Reports",
@@ -90,6 +87,20 @@ const NAV_ITEMS = [
     icon: PersonOutlined,
     active: false,
   },
+  {
+    id: "bus_documents",
+    label: "Bus Documents",
+    icon: DescriptionOutlined,
+    active: false,
+    adminOnly: true,
+  },
+  {
+    id: "bus_maintenance",
+    label: "Bus Maintenance",
+    icon: BuildOutlined,
+    active: false,
+    adminOnly: true,
+  },
   { isDivider: true, id: "div-2", label: "Staff" },
   {
     id: "staff",
@@ -126,7 +137,7 @@ export default function AdminSidebar({ activePage, onPageChange }) {
 
   const handleLogout = () => {
     logout();
-    navigate("/admin/login", { replace: true });
+    navigate("/admin", { replace: true });
   };
 
   return (

@@ -30,7 +30,7 @@ const fieldLabel = {
 };
 
 export default function IdentityVerificationStep() {
-  const { formData, updateFormData, departments, shifts, settingsLoading, settingsError } = useRegistration();
+  const { formData, updateFormData, departments, shifts, settingsLoading, settingsError, retryLoadSettings } = useRegistration();
 
   const { control, handleSubmit, setValue, watch } = useForm({
     defaultValues: {
@@ -275,6 +275,17 @@ export default function IdentityVerificationStep() {
               {/* ── DEPARTMENT (Searchable — Select style) ────────── */}
               <Grid size={{ xs: 12 }}>
                 <p style={fieldLabel}>Department</p>
+                {settingsLoading ? (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, height: 52, px: 1.5, border: "1px solid #E5E7EB", borderRadius: "10px", bgcolor: "#F9FAFB" }}>
+                    <CircularProgress size={16} />
+                    <span style={{ fontSize: "0.85rem", color: "#64748B" }}>Loading departments...</span>
+                  </Box>
+                ) : settingsError && departments.length === 0 ? (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, height: 52, px: 2, border: "1px solid #FECACA", borderRadius: "10px", bgcolor: "#FEF2F2" }}>
+                    <span style={{ fontSize: "0.85rem", color: "#EF4444" }}>Failed to load departments.</span>
+                    <button onClick={retryLoadSettings} style={{ fontSize: "0.78rem", fontWeight: 700, color: "#2563EB", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Retry</button>
+                  </Box>
+                ) : (
                 <Controller
                   name="department"
                   control={control}
@@ -290,8 +301,6 @@ export default function IdentityVerificationStep() {
                       onChange={(_, selected) => {
                         field.onChange(selected);
                         if (selected?.defaultShift) {
-                          // Resolve defaultShift to a shift ID
-                          // It could be stored as shift.id, shift.time, or shift.label
                           const ds = selected.defaultShift;
                           const matchedShift = shifts.find(
                             (s) => s.id === ds || s.time === ds || s.label === ds
@@ -311,6 +320,18 @@ export default function IdentityVerificationStep() {
                             "& .MuiOutlinedInput-root": {
                               height: 52,
                               borderRadius: "10px",
+                              bgcolor: !field.value ? "#EFF6FF" : "transparent",
+                              "& fieldset": { 
+                                borderColor: !field.value ? "#60A5FA" : "rgba(0, 0, 0, 0.23)",
+                                borderWidth: !field.value ? "2px" : "1px"
+                              },
+                              "&:hover fieldset": { 
+                                borderColor: !field.value ? "#3B82F6" : "rgba(0, 0, 0, 0.87)" 
+                              },
+                              "&.Mui-focused fieldset": { 
+                                borderColor: "#2563EB", 
+                                borderWidth: "2px" 
+                              },
                             },
                           }}
                         />
@@ -318,6 +339,7 @@ export default function IdentityVerificationStep() {
                     />
                   )}
                 />
+                )}
               </Grid>
 
                      {/* ── ACADEMIC SHIFT (3 selectable cards) ─────────── */}

@@ -36,12 +36,14 @@ import {
   VisibilityOutlined,
   VisibilityOffOutlined,
   ContentCopyOutlined,
+  WarningAmberOutlined,
 } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";
 import { useAuth } from "../context/AuthContext";
+import { isSpecialCaseStudent } from "../pages/PendingStudentsPage";
 import {
   approveStudent,
-  rejectStudent,
+  deleteStudent,
   fetchPaymentStats,
   fetchAllDepartments,
   fetchAllPickupPoints,
@@ -105,6 +107,7 @@ async function compressToWebpUnder50KB(base64Input, maxKB = 50) {
 // ── Quick-select validity dates ────────────────────────────────
 const VALIDITY_DATES = [
   "30/04/2027",
+  "31/05/2027",
   "30/06/2027",
   "31/07/2027",
   "31/08/2027",
@@ -465,26 +468,24 @@ export default function VerificationModal({
     }
   };
 
-  // ── Reject Dialog State ──────────────────────────────────────
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
+  // ── Delete Dialog State ──────────────────────────────────────
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const openRejectDialog = () => {
-    setRejectReason("");
-    setRejectDialogOpen(true);
+  const openDeleteDialog = () => {
+    setDeleteDialogOpen(true);
   };
 
-  // ── Reject ──────────────────────────────────────────────────
-  const handleReject = async () => {
+  // ── Delete ──────────────────────────────────────────────────
+  const handleDelete = async () => {
     setRejecting(true);
     setError("");
     try {
-      await rejectStudent(token, student._id, rejectReason);
-      setRejectDialogOpen(false);
-      onActionComplete?.("rejected");
+      await deleteStudent(token, student._id);
+      setDeleteDialogOpen(false);
+      onActionComplete?.("deleted");
     } catch (err) {
-      setError(err.message || "Failed to reject student");
-      setRejectDialogOpen(false);
+      setError(err.message || "Failed to delete student");
+      setDeleteDialogOpen(false);
     } finally {
       setRejecting(false);
     }
@@ -580,6 +581,30 @@ export default function VerificationModal({
                 borderRight: { md: "1px solid #E2E8F0" },
               }}
             >
+              {/* ── Special Case Alert Banner ── */}
+              {isSpecialCaseStudent(student) && (
+                <Alert
+                  severity="warning"
+                  icon={<WarningAmberOutlined sx={{ color: "#D97706", fontSize: 22 }} />}
+                  sx={{
+                    mb: 3,
+                    borderRadius: "14px",
+                    border: "1.5px solid #FCD34D",
+                    bgcolor: "#FFFBEB",
+                    boxShadow: "0 2px 10px rgba(245, 158, 11, 0.15)",
+                    "& .MuiAlert-message": { color: "#92400E", fontSize: "0.88rem", lineHeight: 1.5 },
+                  }}
+                >
+                  <strong>Special Verification Case Required:</strong> This student is enrolled in{" "}
+                  <strong>
+                    {typeof student?.department === "string"
+                      ? student.department
+                      : student?.department?.label || "Special Branch"}
+                  </strong>{" "}
+                  (Year {student?.year}). Please verify their academic eligibility carefully before approving.
+                </Alert>
+              )}
+
               {/* ── Photo Section ── */}
               <Box
                 sx={{
@@ -1626,41 +1651,62 @@ export default function VerificationModal({
                       </Grid>
                       <Grid size={{ xs: 12 }}>
                         <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                          {VALIDITY_DATES.map((d) => {
-                            const isoVal = toInputDate(d);
-                            const isActive = watchedValidityDate === isoVal;
-                            return (
-                              <Chip
-                                key={d}
-                                label={d}
-                                size="small"
-                                onClick={() => setValue("validityDate", isoVal)}
-                                sx={{
-                                  fontWeight: 700,
-                                  fontSize: "0.75rem",
-                                  borderRadius: "8px",
-                                  height: 32,
-                                  cursor: "pointer",
-                                  ...(isActive
-                                    ? {
-                                        bgcolor: "#2563EB",
-                                        color: "white",
-                                        boxShadow:
-                                          "0 4px 10px rgba(37,99,235,0.2)",
-                                      }
-                                    : {
-                                        bgcolor: "#F1F5F9",
-                                        color: "#475569",
-                                        border: "1px solid #E2E8F0",
-                                      }),
-                                  transition: "all 0.2s",
-                                  "&:hover": {
-                                    bgcolor: isActive ? "#1D4ED8" : "#E2E8F0",
-                                  },
-                                }}
-                              />
-                            );
-                          })}
+                          {(() => {
+                            const presetDate = watchedDepartment?.validityPresets?.[watchedYear] || null;
+                            return VALIDITY_DATES.map((d) => {
+                              const isoVal = toInputDate(d);
+                              const isActive = watchedValidityDate === isoVal;
+                              const isPreset = presetDate && isoVal === presetDate;
+                              return (
+                                <Chip
+                                  key={d}
+                                  label={d}
+                                  size="small"
+                                  onClick={() => setValue("validityDate", isoVal)}
+                                  sx={{
+                                    fontWeight: isPreset ? 800 : 700,
+                                    fontSize: "0.75rem",
+                                    borderRadius: "8px",
+                                    height: 32,
+                                    cursor: "pointer",
+                                    ...(isActive
+                                      ? {
+                                          bgcolor: "#2563EB",
+                                          color: "white",
+                                          boxShadow:
+                                            "0 4px 10px rgba(37,99,235,0.2)",
+                                        }
+                                      : isPreset
+                                      ? {
+                                          bgcolor: "#FFFBEB",
+                                          color: "#92400E",
+                                          border: "1.5px solid #FCD34D",
+                                          boxShadow: "0 0 0 0 rgba(251, 191, 36, 0.5)",
+                                          animation: "glowPulse 1.8s ease-in-out infinite",
+                                          "@keyframes glowPulse": {
+                                            "0%, 100%": {
+                                              boxShadow: "0 0 4px 0px rgba(251, 191, 36, 0.4), 0 0 8px 2px rgba(251, 191, 36, 0.15)",
+                                            },
+                                            "50%": {
+                                              boxShadow: "0 0 12px 4px rgba(251, 191, 36, 0.7), 0 0 20px 6px rgba(251, 191, 36, 0.25)",
+                                            },
+                                          },
+                                        }
+                                      : {
+                                          bgcolor: "#F1F5F9",
+                                          color: "#475569",
+                                          border: "1px solid #E2E8F0",
+                                        }),
+                                    transition: "all 0.2s",
+                                    "&:hover": {
+                                      bgcolor: isActive ? "#1D4ED8" : isPreset ? "#FEF3C7" : "#E2E8F0",
+                                      transform: isPreset && !isActive ? "scale(1.08)" : "none",
+                                    },
+                                  }}
+                                />
+                              );
+                            });
+                          })()}
                         </Box>
                       </Grid>
                     </Grid>
@@ -2250,7 +2296,7 @@ export default function VerificationModal({
           }}
         >
           <Button
-            onClick={openRejectDialog}
+            onClick={openDeleteDialog}
             disabled={rejecting || submitting}
             variant="outlined"
             color="error"
@@ -2264,7 +2310,7 @@ export default function VerificationModal({
             {rejecting ? (
               <CircularProgress size={20} color="error" />
             ) : (
-              "Reject"
+              "Delete"
             )}
           </Button>
           <Button
@@ -2300,10 +2346,10 @@ export default function VerificationModal({
         onComplete={handleCropComplete}
       />
 
-      {/* Reject Confirmation Dialog */}
+      {/* Delete Confirmation Dialog */}
       <Dialog
-        open={rejectDialogOpen}
-        onClose={() => setRejectDialogOpen(false)}
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
         maxWidth="sm"
         fullWidth
         PaperProps={{
@@ -2337,32 +2383,18 @@ export default function VerificationModal({
               color: "#0F172A",
             }}
           >
-            Reject Registration
+            Delete Registration
           </h2>
           <p
             style={{ margin: "0 0 24px", fontSize: "0.9rem", color: "#64748B" }}
           >
-            Are you sure you want to reject <strong>{student?.fullName}</strong>
-            's registration? This will move them to the rejected archive.
+            Are you sure you want to permanently delete <strong>{student?.fullName}</strong>
+            's registration? This action cannot be undone.
           </p>
-
-          <Box sx={{ textAlign: "left" }}>
-            <p style={labelSx}>Rejection Reason (Optional)</p>
-            <TextField
-              fullWidth
-              size="small"
-              multiline
-              rows={3}
-              placeholder="E.g., Invalid document, duplicate entry..."
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              sx={fieldSx}
-            />
-          </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0, justifyContent: "center", gap: 1 }}>
           <Button
-            onClick={() => setRejectDialogOpen(false)}
+            onClick={() => setDeleteDialogOpen(false)}
             variant="outlined"
             disabled={rejecting}
             sx={{
@@ -2378,7 +2410,7 @@ export default function VerificationModal({
             Cancel
           </Button>
           <Button
-            onClick={handleReject}
+            onClick={handleDelete}
             variant="contained"
             color="error"
             disabled={rejecting}
@@ -2393,7 +2425,7 @@ export default function VerificationModal({
             {rejecting ? (
               <CircularProgress size={20} sx={{ color: "white" }} />
             ) : (
-              "Confirm Reject"
+              "Confirm Delete"
             )}
           </Button>
         </DialogActions>

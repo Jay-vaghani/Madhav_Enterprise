@@ -70,8 +70,8 @@ export default function TempPassReceiptDialog({ open, receiptData, onClose }) {
   .trip-bar { display: flex; justify-content: space-between; align-items: center; background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 1.5mm; padding: 1.5mm 3mm; margin-bottom: 1.5mm; font-size: 9.5pt; font-weight: 800; }
   
   .content { flex: 1; display: flex; flex-direction: column; gap: 2mm; margin-top: 2mm; }
-  .row { display: flex; font-size: 10pt; align-items: baseline; }
-  .row-label { font-weight: 700; width: 35mm; color: #334155; }
+  .row { display: flex; font-size: 9pt; align-items: baseline; }
+  .row-label { font-weight: 700; color: #334155; white-space: nowrap; }
   .row-sep { margin: 0 2mm; }
   .row-value { flex: 1; font-weight: 800; border-bottom: 0.5px dotted #CBD5E1; color: #0F172A; }
   
@@ -126,11 +126,11 @@ export default function TempPassReceiptDialog({ open, receiptData, onClose }) {
       </div>
       <div class="row" style="display:flex; gap: 5mm;">
         <div style="flex:1; display:flex;">
-          <span class="row-label" style="width:28mm;">Payment Mode</span><span class="row-sep">:</span>
+          <span class="row-label">Payment Mode</span><span class="row-sep">:</span>
           <span class="row-value" style="font-size: 9pt;">${paymentDisplay}</span>
         </div>
         <div style="display:flex; width: 45mm;">
-          <span class="row-label" style="width:20mm;">Amount(₹)</span><span class="row-sep">:</span>
+          <span class="row-label">Amount(₹)</span><span class="row-sep">:</span>
           <span class="row-value">${fmtCurrency(data.feeAmount)}</span>
         </div>
       </div>

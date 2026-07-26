@@ -36,6 +36,7 @@ import {
   TableRow,
   ToggleButton,
   ToggleButtonGroup,
+  Autocomplete,
 } from "@mui/material";
 import {
   AddRounded,
@@ -110,6 +111,7 @@ export default function DriverManagementPage() {
   const isAdmin = user?.role === "admin";
 
   const [drivers, setDrivers] = useState([]);
+  const [buses, setBuses] = useState([]);
   const [driverStats, setDriverStats] = useState([]);
   const [busStats, setBusStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -149,6 +151,7 @@ export default function DriverManagementPage() {
     licenseExpiryDate: "",
     bankAccountNumber: "",
     ifscCode: "",
+    assignedBusId: null,
   });
 
   const loadDrivers = useCallback(async () => {
@@ -156,13 +159,15 @@ export default function DriverManagementPage() {
     setIsLoading(true);
     setError("");
     try {
-      const [driversRes, analyticsRes] = await Promise.all([
+      const [driversRes, analyticsRes, busesRes] = await Promise.all([
         fetchAllDrivers(token),
         fetchFuelAnalytics(token, startDate, endDate),
+        fetchAllBuses(token),
       ]);
       setDrivers(driversRes.drivers || []);
       setDriverStats(analyticsRes.analytics?.driverStats || []);
       setBusStats(analyticsRes.analytics?.busStats || []);
+      setBuses(busesRes.buses || []);
     } catch (err) {
       setError(err.message || "Failed to load drivers");
     } finally {
@@ -258,6 +263,7 @@ export default function DriverManagementPage() {
       licenseExpiryDate: "",
       bankAccountNumber: "",
       ifscCode: "",
+      assignedBusId: null,
     });
     setOpenDialog(true);
   };
@@ -276,6 +282,7 @@ export default function DriverManagementPage() {
         : "",
       bankAccountNumber: driver.bankAccountNumber || "",
       ifscCode: driver.ifscCode || "",
+      assignedBusId: driver.assignedBusId?._id || driver.assignedBusId || null,
     });
     setOpenDialog(true);
   };
@@ -333,6 +340,7 @@ export default function DriverManagementPage() {
       licenseExpiryDate: formData.licenseExpiryDate,
       bankAccountNumber: formData.bankAccountNumber,
       ifscCode: formData.ifscCode,
+      assignedBusId: formData.assignedBusId || undefined,
     };
 
     if (pendingPhotoBase64) {
@@ -1086,7 +1094,14 @@ export default function DriverManagementPage() {
                       }}
                     >
                       <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 2 }}
+                        sx={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 2,
+                          flex: 1,
+                          minWidth: 0,
+                          mr: 1,
+                        }}
                       >
                         <Badge
                           overlap="circular"
@@ -1125,12 +1140,13 @@ export default function DriverManagementPage() {
                             {driver.name?.charAt(0)?.toUpperCase() || "D"}
                           </Avatar>
                         </Badge>
-                        <Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
                           <Box
                             sx={{
                               display: "flex",
                               alignItems: "center",
                               gap: 1,
+                              flexWrap: "wrap",
                             }}
                           >
                             <Typography
@@ -1163,6 +1179,7 @@ export default function DriverManagementPage() {
                               display: "flex",
                               alignItems: "center",
                               gap: 1,
+                              mt: 0.3,
                             }}
                           >
                             <PhoneTwoTone
@@ -1178,6 +1195,7 @@ export default function DriverManagementPage() {
                               {driver.mobile}
                             </Typography>
                           </Box>
+
                         </Box>
                       </Box>
                       <Box
@@ -1190,6 +1208,7 @@ export default function DriverManagementPage() {
                           bgcolor: "#F8FAFC",
                           borderRadius: "12px",
                           p: 0.5,
+                          flexShrink: 0,
                         }}
                       >
                         <Tooltip title="Edit Driver">
@@ -1355,6 +1374,37 @@ export default function DriverManagementPage() {
                         )}
                       </Grid>
                     </Box>
+
+                    {/* Assigned Bus Info */}
+                    {driver.assignedBusId && (
+                      <Box sx={{ px: 3, mb: 2.5 }}>
+                        <Chip
+                          icon={
+                            <DirectionsBusTwoTone
+                              sx={{ fontSize: 14, color: "#2563EB" }}
+                            />
+                          }
+                          label={`Bus: ${driver.assignedBusId.numberPlate} — ${driver.assignedBusId.modelName}`}
+                          size="small"
+                          sx={{
+                            width: "100%",
+                            justifyContent: "flex-start",
+                            bgcolor: "#EFF6FF",
+                            color: "#1E40AF",
+                            fontWeight: 700,
+                            fontSize: "0.75rem",
+                            py: 1.8,
+                            px: 1,
+                            borderRadius: "12px",
+                            border: "1px solid #BFDBFE",
+                            "& .MuiChip-label": {
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            },
+                          }}
+                        />
+                      </Box>
+                    )}
 
                     {/* License Info Footer */}
                     <Box
@@ -2213,6 +2263,50 @@ export default function DriverManagementPage() {
                       />
                     ),
                   }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Autocomplete
+                  options={buses}
+                  getOptionLabel={(option) =>
+                    `${option.numberPlate} (${option.modelName})`
+                  }
+                  value={
+                    buses.find((b) => b._id === formData.assignedBusId) || null
+                  }
+                  onChange={(_, newValue) =>
+                    setFormData({
+                      ...formData,
+                      assignedBusId: newValue ? newValue._id : null,
+                    })
+                  }
+                  isOptionEqualToValue={(option, value) =>
+                    option._id === value._id
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Assigned Bus (Optional)"
+                      placeholder="Select default bus for this driver"
+                      InputProps={{
+                        ...(params?.InputProps || {}),
+                        sx: { borderRadius: "12px" },
+                        startAdornment: (
+                          <>
+                            <DirectionsBusTwoTone
+                              sx={{
+                                mr: 1,
+                                ml: 1,
+                                color: "#94A3B8",
+                                fontSize: 20,
+                              }}
+                            />
+                            {params?.InputProps?.startAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
                 />
               </Grid>
             </Grid>

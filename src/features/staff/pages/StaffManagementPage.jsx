@@ -23,6 +23,11 @@ import {
   Tooltip,
   Badge,
   InputLabel,
+  Alert,
+  Divider,
+  Collapse,
+  Select,
+  FormControl,
 } from "@mui/material";
 import {
   SearchOutlined,
@@ -44,6 +49,9 @@ import {
   DownloadOutlined,
   FilterListOutlined,
   CameraAltOutlined,
+  SaveOutlined,
+  WarningAmberOutlined,
+  SwapHorizOutlined,
 } from "@mui/icons-material";
 import {
   fetchAllStaff,
@@ -57,6 +65,10 @@ import {
   approveStaffPayment,
   createManualStaffPayment,
   fetchAllStaffPickupPoints,
+  updateStaffPaymentAmount,
+  updateStaffPaymentDetails,
+  deleteStaffPayment,
+  fetchStaffPendingSummary,
 } from "../../../api/admin/api";
 import { useAuth } from "../../admin/context/AuthContext";
 
@@ -440,13 +452,37 @@ function StaffCard({ staff, pendingCount, onClick }) {
 
 // ─── Payment Row ──────────────────────────────────────────────────────────────
 
-function PaymentRow({ payment, onApprove, onManualEntry }) {
+function PaymentRow({ payment, onApprove, onManualEntry, onRefresh, token }) {
   const [approveForm, setApproveForm] = useState({
     utrNumber: "",
     account: "",
     adminNotes: "",
   });
   const [open, setOpen] = useState(false);
+
+  // Full edit dialog (all statuses)
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    amount: String(payment.amount),
+    utrNumber: payment.utrNumber || "",
+    account: payment.account || "",
+    adminNotes: payment.adminNotes || "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  // Delete confirmation dialog
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const openEditDialog = () => {
+    setEditForm({
+      amount: String(payment.amount),
+      utrNumber: payment.utrNumber || "",
+      account: payment.account || "",
+      adminNotes: payment.adminNotes || "",
+    });
+    setEditOpen(true);
+  };
 
   const handleApprove = async () => {
     if (!approveForm.account) {
@@ -463,6 +499,37 @@ function PaymentRow({ payment, onApprove, onManualEntry }) {
     await onApprove(payment._id, approveForm);
     setOpen(false);
     setApproveForm({ utrNumber: "", account: "", adminNotes: "" });
+  };
+
+  const handleSaveEdit = async () => {
+    setSavingEdit(true);
+    try {
+      await updateStaffPaymentDetails(token, payment._id, {
+        amount: Number(editForm.amount),
+        utrNumber: editForm.utrNumber,
+        account: editForm.account,
+        adminNotes: editForm.adminNotes,
+      });
+      setEditOpen(false);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      alert(err.message || "Failed to save");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteStaffPayment(token, payment._id);
+      setDeleteOpen(false);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      alert(err.message || "Failed to delete");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -482,22 +549,13 @@ function PaymentRow({ payment, onApprove, onManualEntry }) {
       >
         {/* Month + Amount */}
         <Box sx={{ minWidth: 110 }}>
-          <Typography
-            sx={{ fontWeight: 700, color: "#0F172A", fontSize: "0.9rem" }}
-          >
+          <Typography sx={{ fontWeight: 700, color: "#0F172A", fontSize: "0.9rem" }}>
             {MONTH_NAMES[payment.forMonth]} {payment.forYear}
           </Typography>
           <Typography sx={{ color: "#2563EB", fontWeight: 700 }}>
             ₹{payment.amount}
             {payment.isHalfMonth && (
-              <span
-                style={{
-                  fontSize: "0.7rem",
-                  color: "#64748B",
-                  fontWeight: 400,
-                  marginLeft: 4,
-                }}
-              >
+              <span style={{ fontSize: "0.7rem", color: "#64748B", fontWeight: 400, marginLeft: 4 }}>
                 (half)
               </span>
             )}
@@ -514,50 +572,56 @@ function PaymentRow({ payment, onApprove, onManualEntry }) {
                 alt="Screenshot"
                 onClick={() => window.open(payment.screenshotUrl, "_blank")}
                 sx={{
-                  width: 36,
-                  height: 36,
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  cursor: "pointer",
+                  width: 36, height: 36, objectFit: "cover",
+                  borderRadius: "8px", cursor: "pointer",
                   border: "1px solid #E2E8F0",
                   "&:hover": { borderColor: "#94A3B8" },
                 }}
               />
             </Tooltip>
           ) : (
-            <Box
-              sx={{
-                width: 34,
-                height: 34,
-                borderRadius: "8px",
-                bgcolor: "#F1F5F9",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+            <Box sx={{ width: 34, height: 34, borderRadius: "8px", bgcolor: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <ImageOutlined sx={{ fontSize: 18, color: "#CBD5E1" }} />
             </Box>
           )}
         </Box>
 
-        {/* UTR */}
-        <Typography
-          sx={{ color: "#64748B", fontSize: "0.78rem", flex: 1, minWidth: 80 }}
-        >
-          {payment.utrNumber
-            ? `UTR: ${payment.utrNumber}`
-            : payment.adminNotes || "—"}
-        </Typography>
+        {/* UTR / Notes */}
+        <Box sx={{ flex: 1, minWidth: 80, display: "flex", flexDirection: "column" }}>
+          <Typography sx={{ color: "#64748B", fontSize: "0.78rem" }}>
+            {payment.utrNumber ? `UTR: ${payment.utrNumber}` : payment.adminNotes || "—"}
+          </Typography>
+          {payment.status === "approved" && payment.approvedAt && (
+            <Typography sx={{ color: "#94A3B8", fontSize: "0.7rem", fontWeight: 500, mt: 0.5 }}>
+              Approved: {new Date(payment.approvedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+            </Typography>
+          )}
+        </Box>
 
-        {/* Status + Action */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        {/* Status + Actions */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <Chip
             label={payment.status.toUpperCase()}
             size="small"
             color={getPaymentStatusColor(payment.status)}
-            sx={{ fontWeight: 700, fontSize: "0.65rem", height: 22 }}
+            sx={{ fontWeight: 700, fontSize: "0.65rem", height: 22, mr: 0.5 }}
           />
+
+          {/* Edit icon — opens full dialog for every status */}
+          <Tooltip title="Edit entry">
+            <IconButton size="small" onClick={openEditDialog} sx={{ color: "#94A3B8", "&:hover": { color: "#2563EB" } }}>
+              <EditOutlined sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+
+          {/* Delete icon — available on every row */}
+          <Tooltip title="Delete entry">
+            <IconButton size="small" onClick={() => setDeleteOpen(true)} sx={{ color: "#94A3B8", "&:hover": { color: "#EF4444" } }}>
+              <DeleteOutlineOutlined sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+
+          {/* Approve button for submitted */}
           {payment.status === "submitted" && (
             <Button
               variant="contained"
@@ -565,27 +629,19 @@ function PaymentRow({ payment, onApprove, onManualEntry }) {
               color="success"
               startIcon={<CheckCircleOutlineOutlined />}
               onClick={() => setOpen(true)}
-              sx={{
-                textTransform: "none",
-                fontWeight: 600,
-                fontSize: "0.78rem",
-                borderRadius: "8px",
-              }}
+              sx={{ textTransform: "none", fontWeight: 600, fontSize: "0.78rem", borderRadius: "8px", ml: 0.5 }}
             >
               Approve
             </Button>
           )}
+
+          {/* Manual Entry button for pending */}
           {payment.status === "pending" && onManualEntry && (
             <Button
               variant="outlined"
               size="small"
               onClick={onManualEntry}
-              sx={{
-                textTransform: "none",
-                fontWeight: 600,
-                fontSize: "0.78rem",
-                borderRadius: "8px",
-              }}
+              sx={{ textTransform: "none", fontWeight: 600, fontSize: "0.78rem", borderRadius: "8px", ml: 0.5 }}
             >
               Manual Entry
             </Button>
@@ -593,14 +649,8 @@ function PaymentRow({ payment, onApprove, onManualEntry }) {
         </Box>
       </Box>
 
-      {/* Approve Dialog */}
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: "16px" } }}
-      >
+      {/* ── Approve Dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: "16px" } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>
           Approve — {FULL_MONTH_NAMES[payment.forMonth]} {payment.forYear}
         </DialogTitle>
@@ -612,28 +662,10 @@ function PaymentRow({ payment, onApprove, onManualEntry }) {
                 src={payment.screenshotUrl}
                 alt="Screenshot"
                 onClick={() => window.open(payment.screenshotUrl, "_blank")}
-                sx={{
-                  width: "100%",
-                  maxHeight: 300,
-                  objectFit: "contain",
-                  borderRadius: "12px",
-                  border: "1px solid #E2E8F0",
-                  bgcolor: "#F8FAFC",
-                  cursor: "pointer",
-                  mb: 1,
-                }}
+                sx={{ width: "100%", maxHeight: "65vh", objectFit: "contain", borderRadius: "12px", border: "1px solid #E2E8F0", bgcolor: "#F8FAFC", cursor: "pointer", mb: 1 }}
               />
             )}
-            <TextField
-              select
-              label="Select Account *"
-              fullWidth
-              size="small"
-              value={approveForm.account}
-              onChange={(e) =>
-                setApproveForm((prev) => ({ ...prev, account: e.target.value }))
-              }
-            >
+            <TextField select label="Select Account *" fullWidth size="small" value={approveForm.account} onChange={(e) => setApproveForm((prev) => ({ ...prev, account: e.target.value }))}>
               <MenuItem value="C">Account C</MenuItem>
               <MenuItem value="H">Account H</MenuItem>
               <MenuItem value="S">Account S</MenuItem>
@@ -642,54 +674,102 @@ function PaymentRow({ payment, onApprove, onManualEntry }) {
             {approveForm.account !== "Cash" && (
               <TextField
                 label="UTR / Transaction Number (12 Digits)"
-                fullWidth
-                size="small"
-                type="tel"
+                fullWidth size="small" type="tel"
                 inputProps={{ maxLength: 12 }}
                 value={approveForm.utrNumber}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, "");
-                  if (val.length <= 12) {
-                    setApproveForm((prev) => ({ ...prev, utrNumber: val }));
-                  }
-                }}
+                onChange={(e) => { const val = e.target.value.replace(/\D/g, ""); if (val.length <= 12) setApproveForm((prev) => ({ ...prev, utrNumber: val })); }}
               />
             )}
-            <TextField
-              label="Notes (Optional)"
-              fullWidth
-              size="small"
-              multiline
-              rows={2}
-              value={approveForm.adminNotes}
-              onChange={(e) =>
-                setApproveForm((prev) => ({
-                  ...prev,
-                  adminNotes: e.target.value,
-                }))
-              }
-            />
+            <TextField label="Notes (Optional)" fullWidth size="small" multiline rows={2} value={approveForm.adminNotes} onChange={(e) => setApproveForm((prev) => ({ ...prev, adminNotes: e.target.value }))} />
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2.5, pt: 0 }}>
-          <Button onClick={() => setOpen(false)} sx={{ textTransform: "none" }}>
-            Cancel
-          </Button>
+          <Button onClick={() => setOpen(false)} sx={{ textTransform: "none" }}>Cancel</Button>
+          <Button variant="contained" color="success" onClick={handleApprove} sx={{ textTransform: "none", fontWeight: 600 }}>Confirm Approval</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Edit Dialog (all statuses) ────────────────────────────────────── */}
+      <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: "20px" } }}>
+        <Box sx={{ p: 3, pb: 2, background: "linear-gradient(135deg, #2563EB, #1D4ED8)", borderRadius: "10px 10px 0 0" }}>
+          <Typography sx={{ fontWeight: 800, color: "#fff", fontSize: "1rem" }}>Edit Payment Entry</Typography>
+          <Typography sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.8rem", mt: 0.5 }}>
+            {FULL_MONTH_NAMES[payment.forMonth]} {payment.forYear} · {payment.status.toUpperCase()}
+          </Typography>
+        </Box>
+        <DialogContent sx={{ pt: 2.5 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField label="Amount (₹)" type="number" fullWidth size="small" value={editForm.amount} onChange={(e) => setEditForm(p => ({ ...p, amount: e.target.value }))} />
+            <TextField select label="Account" fullWidth size="small" value={editForm.account} onChange={(e) => setEditForm(p => ({ ...p, account: e.target.value }))}>
+              <MenuItem value="C">Account C</MenuItem>
+              <MenuItem value="H">Account H</MenuItem>
+              <MenuItem value="S">Account S</MenuItem>
+              <MenuItem value="Cash">Cash</MenuItem>
+            </TextField>
+            {editForm.account !== "Cash" && (
+              <TextField label="UTR / Transaction Number" fullWidth size="small" value={editForm.utrNumber} onChange={(e) => setEditForm(p => ({ ...p, utrNumber: e.target.value.replace(/\D/g, "").slice(0, 12) }))} />
+            )}
+            <TextField label="Notes" fullWidth size="small" multiline rows={2} value={editForm.adminNotes} onChange={(e) => setEditForm(p => ({ ...p, adminNotes: e.target.value }))} />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setEditOpen(false)} sx={{ textTransform: "none", color: "#64748B" }}>Cancel</Button>
           <Button
             variant="contained"
-            color="success"
-            onClick={handleApprove}
-            sx={{ textTransform: "none", fontWeight: 600 }}
+            onClick={handleSaveEdit}
+            disabled={savingEdit}
+            startIcon={savingEdit ? <CircularProgress size={14} /> : <SaveOutlined />}
+            sx={{ textTransform: "none", fontWeight: 700, borderRadius: "8px", bgcolor: "#2563EB" }}
           >
-            Confirm Approval
+            Save Changes
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* ── Delete Confirmation Dialog ────────────────────────────────────── */}
+      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: "20px", overflow: "hidden" } }}>
+        <Box sx={{ p: 3, textAlign: "center", bgcolor: "#fff" }}>
+          <Avatar sx={{ width: 64, height: 64, bgcolor: "#FEF2F2", color: "#EF4444", mx: "auto", mb: 2 }}>
+            <DeleteOutlineOutlined sx={{ fontSize: 32 }} />
+          </Avatar>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: "#0F172A", mb: 1 }}>Delete Payment Entry</Typography>
+          <Typography variant="body2" sx={{ color: "#64748B", lineHeight: 1.6, mb: 3 }}>
+            Delete the <strong>{FULL_MONTH_NAMES[payment.forMonth]} {payment.forYear}</strong> payment of <strong>₹{payment.amount}</strong>?
+            {payment.status === "approved" && (
+              <><br /><span style={{ color: "#EF4444", fontWeight: 600 }}>⚠ This is an approved payment.</span></>
+            )}
+            {" "}This cannot be undone.
+          </Typography>
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => setDeleteOpen(false)}
+              sx={{ flex: 1, textTransform: "none", fontWeight: 700, borderRadius: "10px", color: "#64748B", borderColor: "#E2E8F0" }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleDelete}
+              disabled={deleting}
+              startIcon={deleting ? <CircularProgress size={14} /> : <DeleteOutlineOutlined />}
+              sx={{ flex: 1, textTransform: "none", fontWeight: 700, borderRadius: "10px", boxShadow: "none" }}
+            >
+              Delete
+            </Button>
+          </Box>
+        </Box>
       </Dialog>
     </>
   );
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
+
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 
 export default function StaffManagementPage() {
   const { token } = useAuth();
@@ -704,6 +784,7 @@ export default function StaffManagementPage() {
   const [pendingScreenshots, setPendingScreenshots] = useState(new Set());
   const [pendingFilter, setPendingFilter] = useState("all");
   const [pendingSubmittedCounts, setPendingSubmittedCounts] = useState({});
+  const [pendingSummaryData, setPendingSummaryData] = useState([]);
 
   // Selected staff detail modal
   const [selectedStaff, setSelectedStaff] = useState(null);
@@ -720,6 +801,7 @@ export default function StaffManagementPage() {
     schoolOrCollege: "",
     shift: "",
     residentialAddress: "",
+    joiningDate: "",
     pickupPoint: "",
     serviceStartDate: "",
     serviceEndDate: "",
@@ -736,6 +818,16 @@ export default function StaffManagementPage() {
     adminNotes: "",
   });
   const [showManualModal, setShowManualModal] = useState(false);
+
+  // Confirmation dialog state (used for pickup point change + delete)
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    confirmColor: "primary",
+    confirmLabel: "Confirm",
+  });
 
   // Profile photo upload state
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -761,7 +853,10 @@ export default function StaffManagementPage() {
   // ── Load pending payment counts for badges ─────────────────────────────────
   const loadPendingCounts = useCallback(async () => {
     try {
-      const res = await fetchPendingStaffPayments(token);
+      const [res, summaryRes] = await Promise.all([
+        fetchPendingStaffPayments(token),
+        fetchStaffPendingSummary(token),
+      ]);
       if (res.success) {
         // allCounts = total unpaid months (pending + submitted) — used for the filter
         const allCounts = {};
@@ -781,6 +876,9 @@ export default function StaffManagementPage() {
         setPendingScreenshots(withScreenshot);
         // Store submitted-only counts for the header "awaiting approval" number
         setPendingSubmittedCounts(submittedCounts);
+      }
+      if (summaryRes && summaryRes.success) {
+        setPendingSummaryData(summaryRes.data || []);
       }
     } catch (err) {
       console.error(err);
@@ -895,9 +993,9 @@ export default function StaffManagementPage() {
         return matchSearch && matchStatus && matchPending;
       })
       .sort((a, b) => {
-        const pa = pendingCounts[a._id?.toString()] || 0;
-        const pb = pendingCounts[b._id?.toString()] || 0;
-        return pb - pa; // highest pending first
+        const sumA = pendingSummaryData.find((p) => String(p.staffId) === String(a._id))?.totalPending || 0;
+        const sumB = pendingSummaryData.find((p) => String(p.staffId) === String(b._id))?.totalPending || 0;
+        return sumB - sumA; // highest total pending amount first
       });
   }, [
     staff,
@@ -906,6 +1004,7 @@ export default function StaffManagementPage() {
     pendingFilter,
     pendingCounts,
     pendingScreenshots,
+    pendingSummaryData,
   ]);
 
   const handleExport = () => {
@@ -936,6 +1035,30 @@ export default function StaffManagementPage() {
     XLSX.writeFile(
       wb,
       `Staff_Export_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  };
+
+  const handleExportPending = () => {
+    if (!pendingSummaryData.length) {
+      alert("No pending staff to export.");
+      return;
+    }
+    const rows = pendingSummaryData.map((s) => ({
+      Name: s.name,
+      Mobile: s.mobile,
+      "Pickup Point": s.pickupPoint,
+      "Monthly Fee": s.monthlyFee,
+      "Service Status": s.serviceStatus.toUpperCase(),
+      "Pending Months": s.pendingMonths,
+      "Total Pending (₹)": s.totalPending,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Pending Staff");
+    XLSX.writeFile(
+      wb,
+      `Pending_Staff_Export_${new Date().toISOString().slice(0, 10)}.xlsx`,
     );
   };
 
@@ -980,59 +1103,84 @@ export default function StaffManagementPage() {
     setEditFormErrors({});
     setEditFormServerError("");
 
-    try {
-      if (actionModal.type === "activate") {
-        await activateStaffService(
-          token,
-          actionModal.data._id,
-          editForm.serviceStartDate,
-        );
-        await updateStaff(token, actionModal.data._id, {
-          name: editForm.name,
-          schoolOrCollege: editForm.schoolOrCollege,
-          shift: editForm.shift,
-          residentialAddress: editForm.residentialAddress,
-          pickupPoint: editForm.pickupPoint,
-        });
-      } else if (actionModal.type === "deactivate") {
-        await deactivateStaffService(
-          token,
-          actionModal.data._id,
-          editForm.serviceEndDate,
-        );
-        await updateStaff(token, actionModal.data._id, {
-          name: editForm.name,
-          schoolOrCollege: editForm.schoolOrCollege,
-          shift: editForm.shift,
-          residentialAddress: editForm.residentialAddress,
-          pickupPoint: editForm.pickupPoint,
-        });
-      } else if (actionModal.type === "edit") {
-        await updateStaff(token, actionModal.data._id, editForm);
+    const proceedWithAction = async () => {
+      try {
+        if (actionModal.type === "activate") {
+          await activateStaffService(
+            token,
+            actionModal.data._id,
+            editForm.serviceStartDate,
+          );
+          await updateStaff(token, actionModal.data._id, {
+            name: editForm.name,
+            schoolOrCollege: editForm.schoolOrCollege,
+            shift: editForm.shift,
+            residentialAddress: editForm.residentialAddress,
+            joiningDate: editForm.joiningDate,
+            pickupPoint: editForm.pickupPoint,
+          });
+        } else if (actionModal.type === "deactivate") {
+          await deactivateStaffService(
+            token,
+            actionModal.data._id,
+            editForm.serviceEndDate,
+          );
+          await updateStaff(token, actionModal.data._id, {
+            name: editForm.name,
+            schoolOrCollege: editForm.schoolOrCollege,
+            shift: editForm.shift,
+            residentialAddress: editForm.residentialAddress,
+            joiningDate: editForm.joiningDate,
+            pickupPoint: editForm.pickupPoint,
+          });
+        } else if (actionModal.type === "edit") {
+          await updateStaff(token, actionModal.data._id, editForm);
+        }
+        setActionModal({ type: null, data: null });
+        setActionDate("");
+        loadData();
+        if (selectedStaff) loadStaffDetails(selectedStaff._id);
+        setConfirmDialog({ ...confirmDialog, open: false });
+      } catch (err) {
+        setEditFormServerError(err.message || "Action failed. Please try again.");
       }
-      setActionModal({ type: null, data: null });
-      setActionDate("");
-      loadData();
-      if (selectedStaff) loadStaffDetails(selectedStaff._id);
-    } catch (err) {
-      setEditFormServerError(err.message || "Action failed. Please try again.");
+    };
+
+    // Check if pickup point changed during an edit or activation where they can change details
+    const oldPickup = actionModal.data?.pickupPoint?._id || actionModal.data?.pickupPoint;
+    const newPickup = editForm.pickupPoint;
+    if (oldPickup !== newPickup) {
+      setConfirmDialog({
+        open: true,
+        title: "Change Pickup Point?",
+        message: "You are changing the pickup point for this staff member. This will automatically update the required fee amount for all their PENDING payment entries to match the new pickup point's fee. Approved payments will not be affected.",
+        confirmLabel: "Update & Cascade Fees",
+        confirmColor: "warning",
+        onConfirm: proceedWithAction
+      });
+    } else {
+      proceedWithAction();
     }
   };
 
-  const handleDelete = async (s) => {
-    if (
-      !window.confirm(
-        `Delete ${s.name} and all their payment records? This cannot be undone.`,
-      )
-    )
-      return;
-    try {
-      await deleteStaff(token, s._id);
-      setSelectedStaff(null);
-      loadData();
-    } catch (err) {
-      alert(err.message || "Delete failed");
-    }
+  const handleDelete = (s) => {
+    setConfirmDialog({
+      open: true,
+      title: "Delete Staff Member",
+      message: `Are you sure you want to delete ${s.name}? All their payment records will also be permanently deleted. This cannot be undone.`,
+      confirmLabel: "Delete Permanently",
+      confirmColor: "error",
+      onConfirm: async () => {
+        try {
+          await deleteStaff(token, s._id);
+          setSelectedStaff(null);
+          loadData();
+          setConfirmDialog({ ...confirmDialog, open: false });
+        } catch (err) {
+          alert(err.message || "Delete failed");
+        }
+      }
+    });
   };
 
   // ── Manual payment ─────────────────────────────────────────────────────────
@@ -1103,7 +1251,9 @@ export default function StaffManagementPage() {
                 ? "deactivated"
                 : statusFilter === "inactive"
                   ? "inactive"
-                  : "active"}{" "}
+                  : statusFilter === "all"
+                    ? "total"
+                    : "active"}{" "}
             · {totalPending} screenshot{totalPending !== 1 ? "s" : ""} pending
             approval
           </Typography>
@@ -1134,6 +1284,7 @@ export default function StaffManagementPage() {
               },
             }}
           >
+            <MenuItem value="all">All Staff</MenuItem>
             <MenuItem value="active">Active</MenuItem>
             <MenuItem value="inactive">Inactive</MenuItem>
             <MenuItem value="deactivated">Deactivated</MenuItem>
@@ -1190,21 +1341,42 @@ export default function StaffManagementPage() {
           />
 
           {/* Export button */}
-          <Tooltip title="Download Excel">
-            <IconButton
-              onClick={handleExport}
-              sx={{
-                bgcolor: "#fff",
-                border: "1px solid #E2E8F0",
-                borderRadius: "10px",
-                p: "8px",
-                flexShrink: 0,
-                "&:hover": { bgcolor: "#F8FAFC" },
-              }}
-            >
-              <DownloadOutlined sx={{ fontSize: 20, color: "#475569" }} />
-            </IconButton>
-          </Tooltip>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Tooltip title="Download Pending Staff">
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={handleExportPending}
+                startIcon={<DownloadOutlined />}
+                sx={{
+                  bgcolor: "#fff",
+                  borderRadius: "10px",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  px: 1.5,
+                  flexShrink: 0,
+                }}
+              >
+                Pending
+              </Button>
+            </Tooltip>
+            <Tooltip title="Download All Staff">
+              <IconButton
+                onClick={handleExport}
+                sx={{
+                  bgcolor: "#fff",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "10px",
+                  p: "8px",
+                  flexShrink: 0,
+                  "&:hover": { bgcolor: "#F8FAFC" },
+                }}
+              >
+                <DownloadOutlined sx={{ fontSize: 20, color: "#475569" }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
       </Box>
 
@@ -1333,6 +1505,9 @@ export default function StaffManagementPage() {
                         schoolOrCollege: s.schoolOrCollege || "",
                         shift: s.shift || "",
                         residentialAddress: s.residentialAddress || "",
+                        joiningDate: s.joiningDate
+                          ? new Date(s.joiningDate).toISOString().slice(0, 10)
+                          : "",
                         pickupPoint: s.pickupPoint?._id || s.pickupPoint || "",
                         serviceStartDate: s.serviceStartDate
                           ? new Date(s.serviceStartDate)
@@ -1461,6 +1636,14 @@ export default function StaffManagementPage() {
                             value: staffDetails.residentialAddress,
                           },
                           {
+                            label: "Joining Date",
+                            value: staffDetails.joiningDate
+                              ? new Date(
+                                  staffDetails.joiningDate,
+                                ).toLocaleDateString("en-IN")
+                              : "—",
+                          },
+                          {
                             label: "Service Start",
                             value: staffDetails.serviceStartDate
                               ? new Date(
@@ -1550,6 +1733,11 @@ export default function StaffManagementPage() {
                                 shift: staffDetails.shift || "",
                                 residentialAddress:
                                   staffDetails.residentialAddress || "",
+                                joiningDate: staffDetails.joiningDate
+                                  ? new Date(staffDetails.joiningDate)
+                                      .toISOString()
+                                      .slice(0, 10)
+                                  : "",
                                 pickupPoint:
                                   staffDetails.pickupPoint?._id ||
                                   staffDetails.pickupPoint ||
@@ -1587,6 +1775,11 @@ export default function StaffManagementPage() {
                                 shift: staffDetails.shift || "",
                                 residentialAddress:
                                   staffDetails.residentialAddress || "",
+                                joiningDate: staffDetails.joiningDate
+                                  ? new Date(staffDetails.joiningDate)
+                                      .toISOString()
+                                      .slice(0, 10)
+                                  : "",
                                 pickupPoint:
                                   staffDetails.pickupPoint?._id ||
                                   staffDetails.pickupPoint ||
@@ -1670,6 +1863,15 @@ export default function StaffManagementPage() {
                                 key={p._id}
                                 payment={p}
                                 onApprove={handleApprovePayment}
+                                token={token}
+                                onRefresh={() => {
+                                  // Reload staff details to reflect updated amounts
+                                  if (selectedStaff) {
+                                    fetchStaffById(token, selectedStaff._id).then((res) => {
+                                      if (res.success) setStaffDetails(res.data);
+                                    });
+                                  }
+                                }}
                                 onManualEntry={() => {
                                   setManualForm((prev) => ({
                                     ...prev,
@@ -1789,6 +1991,20 @@ export default function StaffManagementPage() {
                 }));
                 setEditFormErrors((p) => ({ ...p, residentialAddress: "" }));
               }}
+            />
+            <TextField
+              type="date"
+              label="Joining Date *"
+              fullWidth
+              size="small"
+              value={editForm.joiningDate}
+              error={!!editFormErrors.joiningDate}
+              helperText={editFormErrors.joiningDate || ""}
+              onChange={(e) => {
+                setEditForm((p) => ({ ...p, joiningDate: e.target.value }));
+                setEditFormErrors((p) => ({ ...p, joiningDate: "" }));
+              }}
+              InputLabelProps={{ shrink: true }}
             />
 
             <Typography
@@ -2107,6 +2323,75 @@ export default function StaffManagementPage() {
             Submit
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Beautiful Confirmation Dialog */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "20px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            overflow: "hidden"
+          }
+        }}
+      >
+        <Box sx={{ p: 3, textAlign: "center", bgcolor: "#fff" }}>
+          {confirmDialog.confirmColor === "error" ? (
+            <Avatar sx={{ width: 64, height: 64, bgcolor: "#FEF2F2", color: "#EF4444", mx: "auto", mb: 2 }}>
+              <DeleteOutlineOutlined sx={{ fontSize: 32 }} />
+            </Avatar>
+          ) : confirmDialog.confirmColor === "warning" ? (
+            <Avatar sx={{ width: 64, height: 64, bgcolor: "#FFFBEB", color: "#F59E0B", mx: "auto", mb: 2 }}>
+              <WarningAmberOutlined sx={{ fontSize: 32 }} />
+            </Avatar>
+          ) : (
+            <Avatar sx={{ width: 64, height: 64, bgcolor: "#EFF6FF", color: "#3B82F6", mx: "auto", mb: 2 }}>
+              <SwapHorizOutlined sx={{ fontSize: 32 }} />
+            </Avatar>
+          )}
+          <Typography variant="h6" sx={{ fontWeight: 800, color: "#0F172A", mb: 1, px: 2 }}>
+            {confirmDialog.title}
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#64748B", lineHeight: 1.6, px: 1, mb: 3 }}>
+            {confirmDialog.message}
+          </Typography>
+          <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>
+            <Button
+              variant="outlined"
+              onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+              sx={{
+                flex: 1,
+                textTransform: "none",
+                fontWeight: 700,
+                borderRadius: "10px",
+                color: "#64748B",
+                borderColor: "#E2E8F0",
+                "&:hover": { bgcolor: "#F8FAFC", borderColor: "#CBD5E1" }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              color={confirmDialog.confirmColor}
+              onClick={confirmDialog.onConfirm}
+              sx={{
+                flex: 1,
+                textTransform: "none",
+                fontWeight: 700,
+                borderRadius: "10px",
+                boxShadow: "none",
+                "&:hover": { boxShadow: "none" }
+              }}
+            >
+              {confirmDialog.confirmLabel}
+            </Button>
+          </Box>
+        </Box>
       </Dialog>
     </Box>
   );

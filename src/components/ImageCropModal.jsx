@@ -17,6 +17,7 @@ export default function ImageCropModal({
   imageSrc,
   onClose,
   onComplete,
+  aspect = 1, // pass null for free-form (no fixed aspect ratio)
 }) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -116,7 +117,7 @@ export default function ImageCropModal({
             image={imageSrc}
             crop={crop}
             zoom={zoom}
-            aspect={1}
+            {...(aspect !== null && { aspect })}
             cropShape="rect"
             onCropChange={setCrop}
             onZoomChange={setZoom}

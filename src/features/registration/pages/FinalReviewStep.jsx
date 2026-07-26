@@ -799,16 +799,13 @@ export default function FinalReviewStep() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              bgcolor: "#F8FAFC",
-              border: "1px solid #E2E8F0",
+              bgcolor: !termsAccepted ? "#FEF2F2" : "#EFF6FF",
+              border: "2px solid",
+              borderColor: !termsAccepted ? "#FCA5A5" : "#2563EB",
               borderRadius: "12px",
               px: 2.5,
               py: 1.25,
               transition: "all 0.2s",
-              ...(termsAccepted && {
-                borderColor: "#2563EB",
-                bgcolor: "#EFF6FF",
-              }),
             }}
           >
             <p

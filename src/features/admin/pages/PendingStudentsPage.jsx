@@ -30,14 +30,86 @@ import {
   NotificationsActiveOutlined,
   NotificationsOffOutlined,
   SyncOutlined,
+  AccountBalanceOutlined,
+  WarningAmberOutlined,
+  AutoAwesomeOutlined,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 import {
   fetchPendingStudents,
   fetchDashboardStats,
+  fetchPaymentStats,
 } from "../../../api/admin/api";
 import VerificationModal from "../components/VerificationModal";
 import ReceiptDialog from "../components/ReceiptDialog";
+
+export function isSpecialCaseStudent(student) {
+  if (!student) return false;
+
+  const yearStr = String(student.year || "").trim();
+  const deptLabel = (
+    typeof student.department === "string"
+      ? student.department
+      : student.department?.label ||
+        student.department?.name ||
+        student.department?.code ||
+        ""
+  )
+    .toUpperCase()
+    .trim();
+
+  if (!yearStr || !deptLabel) return false;
+
+  // 4th Year degree branches: B.CSE, B.CV, B.IT, B.EE, B.ME, B.CE, B.CHEM, B.Pharm
+  if (yearStr === "4") {
+    const year4Targets = [
+      "B.CSE",
+      "B.CV",
+      "B.IT",
+      "B.EE",
+      "B.ME",
+      "B.CE",
+      "B.CHEM",
+      "BCSE",
+      "BCV",
+      "BIT",
+      "BEE",
+      "BME",
+      "BCE",
+      "BCHEM",
+      "B.PHARM",
+      "BPHARM",
+      "B.PHARMA",
+      "BPHARMA",
+      "B.PHARMACY",
+      "BPHARMACY",
+    ];
+    return year4Targets.some((t) => deptLabel.includes(t));
+  }
+
+  // 3rd Year diploma branches: D.CSE, D.CV, D.IT, D.EE, D.ME, D.CE, D.CHEM
+  if (yearStr === "3") {
+    const year3Targets = [
+      "D.CSE",
+      "D.CV",
+      "D.IT",
+      "D.EE",
+      "D.ME",
+      "D.CE",
+      "D.CHEM",
+      "DCSE",
+      "DCV",
+      "DIT",
+      "DEE",
+      "DME",
+      "DCE",
+      "DCHEM",
+    ];
+    return year3Targets.some((t) => deptLabel.includes(t));
+  }
+
+  return false;
+}
 
 function playDingDong() {
   try {
@@ -74,9 +146,9 @@ export default function PendingStudentsPage() {
   const [stats, setStats] = useState({
     pending: 0,
     approved: 0,
-    rejected: 0,
     total: 0,
   });
+  const [paymentStats, setPaymentStats] = useState(null);
 
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -96,6 +168,11 @@ export default function PendingStudentsPage() {
   const [department, setDepartment] = useState("");
   const [year, setYear] = useState("");
   const [pickupPoint, setPickupPoint] = useState("");
+  const [specialOnly, setSpecialOnly] = useState(false);
+
+  const specialCasesCount = useMemo(() => {
+    return students.filter((s) => isSpecialCaseStudent(s)).length;
+  }, [students]);
 
   // Verification modal
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -155,9 +232,10 @@ export default function PendingStudentsPage() {
       if (year && student.year !== String(year)) matches = false;
       if (pickupPoint && student.pickupPoint?.label !== pickupPoint)
         matches = false;
+      if (specialOnly && !isSpecialCaseStudent(student)) matches = false;
       return matches;
     });
-  }, [students, debouncedSearch, department, year, pickupPoint]);
+  }, [students, debouncedSearch, department, year, pickupPoint, specialOnly]);
 
   // Dynamic filter options based on fetched students
   const uniqueDepartments = useMemo(() => {
@@ -179,8 +257,16 @@ export default function PendingStudentsPage() {
   const loadStats = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetchDashboardStats(token);
-      setStats(res.data || stats);
+      const [dashRes, payRes] = await Promise.all([
+        fetchDashboardStats(token).catch(() => ({ data: null })),
+        fetchPaymentStats(token).catch(() => ({ data: null })),
+      ]);
+      if (dashRes.data) {
+        setStats(dashRes.data);
+      }
+      if (payRes.data) {
+        setPaymentStats(payRes.data);
+      }
     } catch (err) {
       // Stats are non-critical, don't block
       console.error("Stats error:", err);
@@ -275,6 +361,70 @@ export default function PendingStudentsPage() {
                 borderRadius: "8px",
               }}
             />
+            {specialCasesCount > 0 && (
+              <Chip
+                icon={
+                  <WarningAmberOutlined
+                    style={{
+                      color: specialOnly ? "#fff" : "#D97706",
+                      fontSize: 16,
+                    }}
+                  />
+                }
+                label={`⚡ Special Cases (${specialCasesCount})`}
+                onClick={() => setSpecialOnly((prev) => !prev)}
+                size="small"
+                sx={{
+                  bgcolor: specialOnly ? "#F59E0B" : "#FEF3C7",
+                  color: specialOnly ? "#fff" : "#92400E",
+                  fontWeight: 800,
+                  fontSize: "0.78rem",
+                  height: 28,
+                  borderRadius: "8px",
+                  border: "1px solid #FCD34D",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(245, 158, 11, 0.25)",
+                  "&:hover": { bgcolor: specialOnly ? "#D97706" : "#FDE68A" },
+                }}
+              />
+            )}
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              mb: 1,
+              mt: 1,
+            }}
+          >
+            {paymentStats && (
+              <Chip
+                icon={
+                  <AccountBalanceOutlined
+                    style={{ color: "#059669", fontSize: 16 }}
+                  />
+                }
+                label={
+                  paymentStats.totalAccountA > paymentStats.totalAccountB
+                    ? "Recommended Routing: Account H"
+                    : paymentStats.totalAccountB > paymentStats.totalAccountA
+                      ? "Recommended Routing: Account C"
+                      : "Balances are even - Any account is fine"
+                }
+                size="small"
+                sx={{
+                  bgcolor: "#D1FAE5",
+                  color: "#065F46",
+                  fontWeight: 700,
+                  fontSize: "0.75rem",
+                  height: 28,
+                  borderRadius: "8px",
+                  border: "1px solid #10B981",
+                  boxShadow: "0 2px 4px rgba(16, 185, 129, 0.15)",
+                }}
+              />
+            )}
           </Box>
           <p style={{ margin: 0, fontSize: "0.95rem", color: "#64748B" }}>
             Review and approve student transportation requests for the upcoming
@@ -349,6 +499,20 @@ export default function PendingStudentsPage() {
                 {`
                   @keyframes spin {
                     100% { transform: rotate(360deg); }
+                  }
+                  @keyframes pulseGlow {
+                    0% {
+                      box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4), inset 0 0 8px rgba(245, 158, 11, 0.1);
+                      border-left-color: #F59E0B;
+                    }
+                    50% {
+                      box-shadow: 0 0 16px 3px rgba(245, 158, 11, 0.55), inset 0 0 12px rgba(245, 158, 11, 0.2);
+                      border-left-color: #D97706;
+                    }
+                    100% {
+                      box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4), inset 0 0 8px rgba(245, 158, 11, 0.1);
+                      border-left-color: #F59E0B;
+                    }
                   }
                 `}
               </style>
@@ -669,207 +833,225 @@ export default function PendingStudentsPage() {
             </p>
           </Box>
         ) : (
-          filteredStudents.map((student, index) => (
-            <Box
-              key={student._id}
-              onClick={() => openVerification(student)}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                px: 3,
-                py: 2,
-                borderBottom:
-                  index < filteredStudents.length - 1
-                    ? "1px solid #F1F5F9"
-                    : "none",
-                cursor: "pointer",
-                transition: "background 0.15s ease",
-                "&:hover": { bgcolor: "#FAFBFC" },
-              }}
-            >
-              {/* Student Name + Avatar */}
+          filteredStudents.map((student, index) => {
+            const isSpecial = isSpecialCaseStudent(student);
+            return (
               <Box
+                key={student._id}
+                onClick={() => openVerification(student)}
                 sx={{
-                  flex: 1.5,
-                  minWidth: 180,
                   display: "flex",
                   alignItems: "center",
-                  gap: 1.5,
+                  px: 3,
+                  py: 2,
+                  borderBottom:
+                    index < filteredStudents.length - 1
+                      ? "1px solid #F1F5F9"
+                      : "none",
+                  cursor: "pointer",
+                  transition: "all 0.25s ease",
+                  bgcolor: isSpecial ? "#FFFBEB" : "#fff",
+                  "&:hover": { bgcolor: isSpecial ? "#FEF3C7" : "#FAFBFC" },
+                  ...(isSpecial && {
+                    position: "relative",
+                    borderLeft: "6px solid #F59E0B",
+                    animation: "pulseGlow 2.5s infinite ease-in-out",
+                  }),
                 }}
               >
-                <Avatar
-                  src={student.photoUrl}
+                {/* Student Name + Avatar */}
+                <Box
                   sx={{
-                    width: 50,
-                    height: 50,
-                    bgcolor: "#2563EB",
-                    fontSize: "0.85rem",
-                    fontWeight: 700,
-                    borderRadius: "10px",
+                    flex: 1.5,
+                    minWidth: 180,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
                   }}
                 >
-                  {student.fullName?.charAt(0)?.toUpperCase()}
-                </Avatar>
-                <Box>
+                  <Avatar
+                    src={student.photoUrl}
+                    sx={{
+                      width: 50,
+                      height: 50,
+                      bgcolor: isSpecial ? "#D97706" : "#2563EB",
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                      borderRadius: "10px",
+                    }}
+                  >
+                    {student.fullName?.charAt(0)?.toUpperCase()}
+                  </Avatar>
+                  <Box>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "0.95rem",
+                          fontWeight: 700,
+                          color: "#0F172A",
+                        }}
+                      >
+                        {student.fullName}
+                      </p>
+                    </Box>
+                    <p
+                      style={{
+                        margin: "2px 0 0",
+                        fontSize: "0.75rem",
+                        color: "#94A3B8",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {student.createdAt
+                        ? new Date(student.createdAt).toLocaleDateString(
+                            "en-GB",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            },
+                          )
+                        : "—"}
+                    </p>
+                  </Box>
+                </Box>
+
+                {/* Year */}
+                <Box
+                  sx={{
+                    flex: 0.6,
+                    display: { xs: "none", sm: "block" },
+                    minWidth: 0,
+                  }}
+                >
                   <p
                     style={{
                       margin: 0,
-                      fontSize: "0.95rem",
-                      fontWeight: 700,
-                      color: "#0F172A",
-                    }}
-                  >
-                    {student.fullName}
-                  </p>
-                  <p
-                    style={{
-                      margin: "2px 0 0",
-                      fontSize: "0.75rem",
-                      color: "#94A3B8",
+                      fontSize: "0.85rem",
+                      color: "#334155",
                       fontWeight: 500,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
-                    {student.createdAt
-                      ? new Date(student.createdAt).toLocaleDateString(
-                          "en-GB",
-                          {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                          },
-                        )
-                      : "—"}
+                    {student.year ? `Year ${student.year}` : "—"}
                   </p>
                 </Box>
-              </Box>
 
-              {/* Year */}
-              <Box
-                sx={{
-                  flex: 0.6,
-                  display: { xs: "none", sm: "block" },
-                  minWidth: 0,
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "0.85rem",
-                    color: "#334155",
-                    fontWeight: 500,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {student.year ? `Year ${student.year}` : "—"}
-                </p>
-              </Box>
-
-              {/* Department */}
-              <Box
-                sx={{
-                  flex: 1.5,
-                  display: { xs: "none", md: "block" },
-                  minWidth: 0,
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "0.85rem",
-                    color: "#334155",
-                    fontWeight: 500,
-                    textWrap: "wrap",
-                  }}
-                >
-                  {student.department?.label || "—"}
-                </p>
-              </Box>
-
-              {/* Pickup Point */}
-              <Box
-                sx={{
-                  flex: 1.5,
-                  display: { xs: "none", lg: "flex" },
-                  alignItems: "flex-start",
-                  gap: 0.5,
-                  minWidth: 0,
-                }}
-              >
-                <LocationOnOutlined
+                {/* Department */}
+                <Box
                   sx={{
-                    fontSize: 16,
-                    color: "#2563EB",
-                    flexShrink: 0,
-                    mt: 0.2,
-                  }}
-                />
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "0.85rem",
-                    color: "#334155",
-                    fontWeight: 500,
-                    wordBreak: "break-word",
+                    flex: 1.5,
+                    display: { xs: "none", md: "block" },
+                    minWidth: 0,
                   }}
                 >
-                  {student.pickupPoint?.label || "—"}
-                </p>
-              </Box>
-
-              {/* Fees */}
-              <Box
-                sx={{
-                  flex: 0.6,
-                  display: { xs: "none", lg: "block" },
-                  minWidth: 0,
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "0.85rem",
-                    color: "#334155",
-                    fontWeight: 600,
-                  }}
-                >
-                  {student.pickupPoint?.fee}
-                </p>
-              </Box>
-
-              {/* Actions */}
-              <Box
-                sx={{
-                  flex: 0.8,
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 1,
-                }}
-              >
-                <Tooltip title="Open Verification">
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openVerification(student);
-                    }}
-                    sx={{
-                      color: "#2563EB",
-                      border: "1px solid #BFDBFE",
-                      borderRadius: "8px",
-                      "&:hover": {
-                        bgcolor: "#EFF6FF",
-                        borderColor: "#2563EB",
-                      },
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "0.85rem",
+                      color: "#334155",
+                      fontWeight: 500,
+                      textWrap: "wrap",
                     }}
                   >
-                    <OpenInNewOutlined sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
+                    {student.department?.label || "—"}
+                  </p>
+                </Box>
+
+                {/* Pickup Point */}
+                <Box
+                  sx={{
+                    flex: 1.5,
+                    display: { xs: "none", lg: "flex" },
+                    alignItems: "flex-start",
+                    gap: 0.5,
+                    minWidth: 0,
+                  }}
+                >
+                  <LocationOnOutlined
+                    sx={{
+                      fontSize: 16,
+                      color: "#2563EB",
+                      flexShrink: 0,
+                      mt: 0.2,
+                    }}
+                  />
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "0.85rem",
+                      color: "#334155",
+                      fontWeight: 500,
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {student.pickupPoint?.label || "—"}
+                  </p>
+                </Box>
+
+                {/* Fees */}
+                <Box
+                  sx={{
+                    flex: 0.6,
+                    display: { xs: "none", lg: "block" },
+                    minWidth: 0,
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "0.85rem",
+                      color: "#334155",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {student.pickupPoint?.fee}
+                  </p>
+                </Box>
+
+                {/* Actions */}
+                <Box
+                  sx={{
+                    flex: 0.8,
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: 1,
+                  }}
+                >
+                  <Tooltip title="Open Verification">
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openVerification(student);
+                      }}
+                      sx={{
+                        color: "#2563EB",
+                        border: "1px solid #BFDBFE",
+                        borderRadius: "8px",
+                        "&:hover": {
+                          bgcolor: "#EFF6FF",
+                          borderColor: "#2563EB",
+                        },
+                      }}
+                    >
+                      <OpenInNewOutlined sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               </Box>
-            </Box>
-          ))
+            );
+          })
         )}
 
         {/* Pagination Controls Removed */}
@@ -928,7 +1110,7 @@ export default function PendingStudentsPage() {
             </Box>
             <p style={{ margin: 0, fontSize: "0.82rem", color: "#94A3B8" }}>
               {stats.total > 0
-                ? `${(stats.approved || 0) + (stats.rejected || 0)} of ${stats.total} total registrations have been processed.`
+                ? `${stats.approved || 0} of ${stats.total} total registrations have been processed.`
                 : "No registrations yet."}
             </p>
           </Grid>
@@ -962,30 +1144,6 @@ export default function PendingStudentsPage() {
                   }}
                 >
                   {stats.approved}
-                </p>
-              </Box>
-              <Box sx={{ textAlign: "center" }}>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "0.68rem",
-                    fontWeight: 700,
-                    color: "#94A3B8",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                  }}
-                >
-                  Rejected
-                </p>
-                <p
-                  style={{
-                    margin: "2px 0 0",
-                    fontSize: "1.5rem",
-                    fontWeight: 800,
-                    color: "#EF4444",
-                  }}
-                >
-                  {stats.rejected}
                 </p>
               </Box>
             </Box>

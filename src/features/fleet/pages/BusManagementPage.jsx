@@ -26,6 +26,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  MenuItem,
 } from "@mui/material";
 import {
   AddRounded,
@@ -50,6 +51,17 @@ import {
   WarningAmberRounded,
   SearchOutlined,
   CloseRounded,
+  DescriptionTwoTone,
+  BuildTwoTone,
+  CheckCircleTwoTone,
+  ErrorTwoTone,
+  WarningAmberTwoTone,
+  LoopTwoTone,
+  PrintTwoTone,
+  PrintDisabledTwoTone,
+  NotificationsActiveTwoTone,
+  NotificationsNoneTwoTone,
+  AccountBalanceOutlined,
 } from "@mui/icons-material";
 import { useAuth } from "../../admin/context/AuthContext";
 import {
@@ -59,6 +71,9 @@ import {
   deleteBus,
   fetchFuelAnalytics,
   fetchAllFuelEntries,
+  fetchBusDocuments,
+  fetchBusMaintenance,
+  fetchMaintenanceAlerts,
 } from "../../../api/admin/api";
 
 const STATUS_CONFIG = {
@@ -74,6 +89,7 @@ export default function BusManagementPage() {
 
   const [buses, setBuses] = useState([]);
   const [busStats, setBusStats] = useState([]);
+  const [maintenanceAlerts, setMaintenanceAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -90,6 +106,9 @@ export default function BusManagementPage() {
   const [detailEntries, setDetailEntries] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [detailDocuments, setDetailDocuments] = useState([]);
+  const [detailMaintenance, setDetailMaintenance] = useState([]);
+  // Photo preview dialog
 
   const [formData, setFormData] = useState({
     modelName: "",
@@ -99,6 +118,9 @@ export default function BusManagementPage() {
     thresholdGood: "",
     thresholdOkay: "",
     thresholdAlarming: "",
+    gstOwner: "",
+    hypothecation: "",
+    hypothecationBank: "",
   });
 
   const loadBuses = useCallback(async () => {
@@ -106,12 +128,14 @@ export default function BusManagementPage() {
     setIsLoading(true);
     setError("");
     try {
-      const [busesRes, analyticsRes] = await Promise.all([
+      const [busesRes, analyticsRes, alertsRes] = await Promise.all([
         fetchAllBuses(token),
         fetchFuelAnalytics(token), // All-time stats
+        fetchMaintenanceAlerts(token).catch(() => ({ alerts: [] })),
       ]);
       setBuses(busesRes.buses || []);
       setBusStats(analyticsRes.analytics?.busStats || []);
+      setMaintenanceAlerts(alertsRes.alerts || []);
     } catch (err) {
       setError(err.message || "Failed to load buses");
     } finally {
@@ -127,6 +151,18 @@ export default function BusManagementPage() {
   const getBusStats = (busId) => {
     return busStats.find((s) => s.busId === busId || s._id === busId) || null;
   };
+
+  // Get maintenance alert for a specific bus
+  const getBusAlert = (busId) => {
+    return maintenanceAlerts.find((a) => a.busId === busId || a.busId?._id === busId) || null;
+  };
+
+  // Count total buses with alerts
+  const alertSummary = useMemo(() => {
+    const overdue = maintenanceAlerts.filter((a) => a.status === "overdue").length;
+    const dueSoon = maintenanceAlerts.filter((a) => a.status === "due-soon").length;
+    return { overdue, dueSoon, total: overdue + dueSoon };
+  }, [maintenanceAlerts]);
 
   // Frontend-filtered list (model name OR number plate, case-insensitive)
   const q = searchQuery.trim().toLowerCase();
@@ -147,9 +183,17 @@ export default function BusManagementPage() {
     setDetailBus(bus);
     setDetailOpen(true);
     setDetailLoading(true);
+    setDetailDocuments([]);
+    setDetailMaintenance([]);
     try {
-      const res = await fetchAllFuelEntries(token, bus._id);
-      setDetailEntries(res.fuelEntries || []);
+      const [fuelRes, docsRes, maintRes] = await Promise.all([
+        fetchAllFuelEntries(token, bus._id),
+        fetchBusDocuments(token, bus._id).catch(() => ({ documents: [] })),
+        fetchBusMaintenance(token, bus._id).catch(() => ({ records: [] })),
+      ]);
+      setDetailEntries(fuelRes.fuelEntries || []);
+      setDetailDocuments(docsRes.documents || []);
+      setDetailMaintenance(maintRes.records || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -168,6 +212,9 @@ export default function BusManagementPage() {
       thresholdGood: "",
       thresholdOkay: "",
       thresholdAlarming: "",
+      gstOwner: "",
+      hypothecation: "",
+      hypothecationBank: "",
     });
     setOpenDialog(true);
   };
@@ -183,6 +230,9 @@ export default function BusManagementPage() {
       thresholdGood: bus.thresholdGood,
       thresholdOkay: bus.thresholdOkay,
       thresholdAlarming: bus.thresholdAlarming,
+      gstOwner: bus.gstOwner || "",
+      hypothecation: bus.hypothecation || "",
+      hypothecationBank: bus.hypothecationBank || "",
     });
     setOpenDialog(true);
   };
@@ -216,6 +266,9 @@ export default function BusManagementPage() {
       thresholdGood: Number(formData.thresholdGood),
       thresholdOkay: Number(formData.thresholdOkay),
       thresholdAlarming: Number(formData.thresholdAlarming),
+      gstOwner: formData.gstOwner,
+      hypothecation: formData.hypothecation,
+      hypothecationBank: formData.hypothecation === "with" ? formData.hypothecationBank : undefined,
     };
 
     try {
@@ -298,6 +351,43 @@ export default function BusManagementPage() {
                 px: 0.5,
               }}
             />
+            {/* Maintenance Alert Notification Badge */}
+            {alertSummary.total > 0 && (
+              <Tooltip
+                title={`${alertSummary.overdue} overdue, ${alertSummary.dueSoon} due soon`}
+                arrow
+                TransitionComponent={Fade}
+              >
+                <Chip
+                  icon={
+                    alertSummary.overdue > 0 ? (
+                      <NotificationsActiveTwoTone
+                        sx={{ fontSize: "16px !important", color: "#EF4444 !important" }}
+                      />
+                    ) : (
+                      <NotificationsActiveTwoTone
+                        sx={{ fontSize: "16px !important", color: "#EAB308 !important" }}
+                      />
+                    )
+                  }
+                  label={`${alertSummary.total} alert${alertSummary.total > 1 ? "s" : ""}`}
+                  size="small"
+                  sx={{
+                    bgcolor: alertSummary.overdue > 0 ? "#FEE2E2" : "#FEF9C3",
+                    color: alertSummary.overdue > 0 ? "#991B1B" : "#854D0E",
+                    fontWeight: 800,
+                    fontSize: "0.8rem",
+                    borderRadius: "8px",
+                    height: "24px",
+                    animation: alertSummary.overdue > 0 ? "pulse 2s infinite" : "none",
+                    "@keyframes pulse": {
+                      "0%, 100%": { opacity: 1 },
+                      "50%": { opacity: 0.7 },
+                    },
+                  }}
+                />
+              </Tooltip>
+            )}
           </Box>
           <Typography sx={{ color: "#64748B", fontSize: "0.95rem", ml: 6 }}>
             Manage your fleet, track efficiency, and configure performance
@@ -543,7 +633,7 @@ export default function BusManagementPage() {
                         alignItems: "flex-start",
                       }}
                     >
-                      <Box>
+                      <Box sx={{ flex: 1, minWidth: 0, mr: 1 }}>
                         <Typography
                           variant="h6"
                           sx={{ fontWeight: 800, color: "#0F172A", mb: 0.5 }}
@@ -551,7 +641,7 @@ export default function BusManagementPage() {
                           {bus.modelName}
                         </Typography>
                         <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                          sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}
                         >
                           <Chip
                             label={bus.numberPlate}
@@ -565,6 +655,118 @@ export default function BusManagementPage() {
                               letterSpacing: "0.05em",
                             }}
                           />
+                          {/* Maintenance Alert Badge on Card */}
+                          {(() => {
+                            const alert = getBusAlert(bus._id);
+                            if (!alert || alert.status === "ok") return null;
+                            const isOverdue = alert.status === "overdue";
+                            return (
+                              <Tooltip
+                                title={
+                                  isOverdue
+                                    ? `${alert.overdueCount} service${alert.overdueCount > 1 ? "s" : ""} overdue — ${alert.overdue.map((o) => o.maintenanceType).join(", ")}`
+                                    : `${alert.dueSoonCount} service${alert.dueSoonCount > 1 ? "s" : ""} due soon (within ${alert.dueSoon[0]?.diff?.toLocaleString("en-IN") || "1,000"} km)`
+                                }
+                                arrow
+                              >
+                                <Chip
+                                  icon={
+                                    isOverdue ? (
+                                      <ErrorTwoTone sx={{ fontSize: "12px !important", color: "#EF4444 !important" }} />
+                                    ) : (
+                                      <WarningAmberTwoTone sx={{ fontSize: "12px !important", color: "#EAB308 !important" }} />
+                                    )
+                                  }
+                                  label={
+                                    isOverdue
+                                      ? `${alert.overdueCount} overdue`
+                                      : `${alert.dueSoonCount} due soon`
+                                  }
+                                  size="small"
+                                  sx={{
+                                    bgcolor: isOverdue ? "#FEE2E2" : "#FEF9C3",
+                                    color: isOverdue ? "#991B1B" : "#854D0E",
+                                    fontWeight: 700,
+                                    fontSize: "0.65rem",
+                                    borderRadius: "6px",
+                                    height: "20px",
+                                    border: `1px solid ${isOverdue ? "#FECACA" : "#FDE68A"}`,
+                                    animation: isOverdue ? "cardPulse 2s infinite" : "none",
+                                    "@keyframes cardPulse": {
+                                      "0%, 100%": { opacity: 1 },
+                                      "50%": { opacity: 0.65 },
+                                    },
+                                  }}
+                                />
+                              </Tooltip>
+                            );
+                          })()}
+
+                          {/* GST Owner Chip */}
+                          {bus.gstOwner && (
+                            <Chip
+                              label={`GST: ${bus.gstOwner}`}
+                              size="small"
+                              sx={{
+                                fontWeight: 700,
+                                fontSize: "0.62rem",
+                                bgcolor: "#F5F3FF",
+                                color: "#7C3AED",
+                                borderRadius: "6px",
+                                height: "20px",
+                                border: "1px solid #DDD6FE",
+                                maxWidth: "100%",
+                                "& .MuiChip-label": { overflow: "hidden", textOverflow: "ellipsis" },
+                              }}
+                            />
+                          )}
+
+                          {/* Hypothecation Chip */}
+                          {bus.hypothecation && (
+                            <Tooltip
+                              title={
+                                bus.hypothecation === "with"
+                                  ? `Financed by: ${bus.hypothecationBank || "N/A"}`
+                                  : "Owned outright — no loan"
+                              }
+                              arrow
+                            >
+                              <Chip
+                                icon={
+                                  bus.hypothecation === "with" ? (
+                                    <AccountBalanceOutlined sx={{ fontSize: "11px !important", color: "#C2410C !important" }} />
+                                  ) : (
+                                    <CheckCircleTwoTone sx={{ fontSize: "11px !important", color: "#166534 !important" }} />
+                                  )
+                                }
+                                label={
+                                  bus.hypothecation === "with"
+                                    ? "Financed"
+                                    : "Owned"
+                                }
+                                size="small"
+                                sx={{
+                                  fontWeight: 700,
+                                  fontSize: "0.62rem",
+                                  bgcolor:
+                                    bus.hypothecation === "with"
+                                      ? "#FFF7ED"
+                                      : "#ECFDF5",
+                                  color:
+                                    bus.hypothecation === "with"
+                                      ? "#C2410C"
+                                      : "#065F46",
+                                  borderRadius: "6px",
+                                  height: "20px",
+                                  border: `1px solid ${
+                                    bus.hypothecation === "with"
+                                      ? "#FED7AA"
+                                      : "#A7F3D0"
+                                  }`,
+                                }}
+                              />
+                            </Tooltip>
+                          )}
                         </Box>
                       </Box>
                       <Box
@@ -577,6 +779,7 @@ export default function BusManagementPage() {
                           bgcolor: "#F8FAFC",
                           borderRadius: "12px",
                           p: 0.5,
+                          flexShrink: 0,
                         }}
                       >
                         <Tooltip title="Edit Bus">
@@ -1352,10 +1555,344 @@ export default function BusManagementPage() {
                   </Table>
                 </TableContainer>
               )}
+
+              {/* ── Bus Documents Section ── */}
+              <Divider sx={{ my: 3 }} />
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  fontSize: "0.85rem",
+                  color: "#475569",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  mb: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <DescriptionTwoTone sx={{ fontSize: 18, color: "#7C3AED" }} />
+                Documents ({detailDocuments.length})
+                {/* Expiry alert badges */}
+                {detailDocuments.some((d) => new Date(d.expiryDate) < new Date()) && (
+                  <Chip
+                    size="small"
+                    icon={<ErrorTwoTone sx={{ fontSize: "13px !important" }} />}
+                    label="Expired"
+                    sx={{ bgcolor: "#FEE2E2", color: "#991B1B", fontWeight: 700, borderRadius: "6px", height: "22px", ml: 0.5 }}
+                  />
+                )}
+                {detailDocuments.some((d) => {
+                  const days = Math.ceil((new Date(d.expiryDate) - new Date()) / 86400000);
+                  return days >= 0 && days <= 30;
+                }) && (
+                  <Chip
+                    size="small"
+                    icon={<WarningAmberTwoTone sx={{ fontSize: "13px !important" }} />}
+                    label="Expiring Soon"
+                    sx={{ bgcolor: "#FEF9C3", color: "#854D0E", fontWeight: 700, borderRadius: "6px", height: "22px" }}
+                  />
+                )}
+              </Typography>
+
+              {detailDocuments.length === 0 ? (
+                <Box
+                  sx={{
+                    p: 4,
+                    textAlign: "center",
+                    bgcolor: "#F8FAFC",
+                    borderRadius: "16px",
+                    border: "1.5px dashed #E2E8F0",
+                  }}
+                >
+                  <Typography sx={{ color: "#94A3B8", fontWeight: 600, fontSize: "0.85rem" }}>
+                    No documents added for this bus.
+                  </Typography>
+                </Box>
+              ) : (
+                <Grid container spacing={1.5}>
+                  {detailDocuments.map((doc) => {
+                    const daysLeft = Math.ceil((new Date(doc.expiryDate) - new Date()) / 86400000);
+                    const docStatus =
+                      daysLeft < 0
+                        ? { label: "Expired", color: "#991B1B", bg: "#FEE2E2", border: "#FECACA", Icon: ErrorTwoTone, iconColor: "#EF4444" }
+                        : daysLeft <= 30
+                        ? { label: `${daysLeft}d left`, color: "#854D0E", bg: "#FEF9C3", border: "#FDE68A", Icon: WarningAmberTwoTone, iconColor: "#EAB308" }
+                        : { label: "Valid", color: "#166534", bg: "#DCFCE7", border: "#BBF7D0", Icon: CheckCircleTwoTone, iconColor: "#22C55E" };
+                    const DocIcon = docStatus.Icon;
+                    return (
+                      <Grid size={{ xs: 12, sm: 6, md: 4 }} key={doc._id}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1.5,
+                            p: 1.5,
+                            borderRadius: "14px",
+                            border: `1.5px solid ${docStatus.border}`,
+                            bgcolor: docStatus.bg,
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          {/* Icon */}
+                          <Box
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: "10px",
+                              bgcolor: "white",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <DescriptionTwoTone sx={{ fontSize: 22, color: docStatus.iconColor }} />
+                          </Box>
+                          <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography
+                              sx={{
+                                fontWeight: 800,
+                                fontSize: "0.82rem",
+                                color: "#0F172A",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {doc.title}
+                            </Typography>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.3 }}>
+                              <CalendarTodayTwoTone sx={{ fontSize: 11, color: "#94A3B8" }} />
+                              <Typography sx={{ fontSize: "0.7rem", color: "#64748B", fontWeight: 600 }}>
+                                {new Date(doc.expiryDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: "flex", gap: 0.75, mt: 0.4, flexWrap: "wrap" }}>
+                              <Chip
+                                size="small"
+                                icon={<DocIcon sx={{ fontSize: "11px !important", color: `${docStatus.iconColor} !important` }} />}
+                                label={docStatus.label}
+                                sx={{
+                                  bgcolor: "white",
+                                  color: docStatus.color,
+                                  fontWeight: 700,
+                                  fontSize: "0.65rem",
+                                  borderRadius: "6px",
+                                  height: "18px",
+                                }}
+                              />
+                              <Chip
+                                size="small"
+                                icon={
+                                  doc.hasHardCopy
+                                    ? <PrintTwoTone sx={{ fontSize: "11px !important", color: "#166534 !important" }} />
+                                    : <PrintDisabledTwoTone sx={{ fontSize: "11px !important", color: "#94A3B8 !important" }} />
+                                }
+                                label={doc.hasHardCopy ? "Hard Copy" : "Digital"}
+                                sx={{
+                                  bgcolor: doc.hasHardCopy ? "#DCFCE7" : "white",
+                                  color: doc.hasHardCopy ? "#166534" : "#94A3B8",
+                                  fontWeight: 700,
+                                  fontSize: "0.65rem",
+                                  borderRadius: "6px",
+                                  height: "18px",
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        </Box>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              )}
+
+              {/* ── Bus Maintenance Section ── */}
+              <Divider sx={{ my: 3 }} />
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  fontSize: "0.85rem",
+                  color: "#475569",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  mb: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <BuildTwoTone sx={{ fontSize: 18, color: "#0891B2" }} />
+                Maintenance ({detailMaintenance.length} records)
+                {/* Overdue/Due Soon badges using latest odometer from busStats */}
+                {(() => {
+                  const stats = getBusStats(detailBus?._id);
+                  const latestOdo = stats?.latestOdometer;
+                  const overdueCount = latestOdo
+                    ? detailMaintenance.filter((r) => r.nextDueOdometer && latestOdo >= r.nextDueOdometer).length
+                    : 0;
+                  const dueSoonCount = latestOdo
+                    ? detailMaintenance.filter((r) => {
+                        if (!r.nextDueOdometer) return false;
+                        const diff = r.nextDueOdometer - latestOdo;
+                        return diff > 0 && diff <= 1000;
+                      }).length
+                    : 0;
+                  return (
+                    <>
+                      {overdueCount > 0 && (
+                        <Chip
+                          size="small"
+                          icon={<ErrorTwoTone sx={{ fontSize: "13px !important" }} />}
+                          label={`${overdueCount} Overdue`}
+                          sx={{ bgcolor: "#FEE2E2", color: "#991B1B", fontWeight: 700, borderRadius: "6px", height: "22px" }}
+                        />
+                      )}
+                      {dueSoonCount > 0 && (
+                        <Chip
+                          size="small"
+                          icon={<WarningAmberTwoTone sx={{ fontSize: "13px !important" }} />}
+                          label={`${dueSoonCount} Due Soon`}
+                          sx={{ bgcolor: "#FEF9C3", color: "#854D0E", fontWeight: 700, borderRadius: "6px", height: "22px" }}
+                        />
+                      )}
+                    </>
+                  );
+                })()}
+              </Typography>
+
+              {detailMaintenance.length === 0 ? (
+                <Box
+                  sx={{
+                    p: 4,
+                    textAlign: "center",
+                    bgcolor: "#F8FAFC",
+                    borderRadius: "16px",
+                    border: "1.5px dashed #E2E8F0",
+                  }}
+                >
+                  <Typography sx={{ color: "#94A3B8", fontWeight: 600, fontSize: "0.85rem" }}>
+                    No maintenance records for this bus.
+                  </Typography>
+                </Box>
+              ) : (
+                <TableContainer
+                  component={Paper}
+                  elevation={0}
+                  sx={{ borderRadius: "16px", border: "1px solid #F1F5F9" }}
+                >
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "#F8FAFC" }}>
+                        {["Date", "Service", "Odometer", "Next Due", "Status", "Cost", "Hard Copy"].map((h) => (
+                          <TableCell
+                            key={h}
+                            sx={{ fontWeight: 800, fontSize: "0.7rem", color: "#475569", py: 1.5 }}
+                          >
+                            {h}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {detailMaintenance.map((rec) => {
+                        const stats = getBusStats(detailBus?._id);
+                        const latestOdo = stats?.latestOdometer;
+                        const diff = latestOdo && rec.nextDueOdometer ? rec.nextDueOdometer - latestOdo : null;
+                        const maintStatus =
+                          !rec.nextDueOdometer || !latestOdo
+                            ? { label: "—", color: "#94A3B8", bg: "#F1F5F9", border: "#E2E8F0", Icon: null }
+                            : diff <= 0
+                            ? { label: "Overdue", color: "#991B1B", bg: "#FEE2E2", border: "#FECACA", Icon: ErrorTwoTone, iconColor: "#EF4444" }
+                            : diff <= 1000
+                            ? { label: `${diff.toLocaleString("en-IN")} km`, color: "#854D0E", bg: "#FEF9C3", border: "#FDE68A", Icon: WarningAmberTwoTone, iconColor: "#EAB308" }
+                            : { label: "OK", color: "#166534", bg: "#DCFCE7", border: "#BBF7D0", Icon: CheckCircleTwoTone, iconColor: "#22C55E" };
+                        const MaintIcon = maintStatus.Icon;
+                        return (
+                          <TableRow
+                            key={rec._id}
+                            sx={{ "&:hover": { bgcolor: "#F8FAFC" }, transition: "background 0.15s" }}
+                          >
+                            <TableCell sx={{ fontWeight: 600, fontSize: "0.78rem", color: "#334155" }}>
+                              {new Date(rec.datePerformed).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700, fontSize: "0.78rem", color: "#0F172A", maxWidth: 140 }}>
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                                <Box sx={{ p: 0.4, borderRadius: "6px", bgcolor: "#ECFEFF", color: "#0891B2", display: "flex" }}>
+                                  <BuildTwoTone sx={{ fontSize: 12 }} />
+                                </Box>
+                                <Typography sx={{ fontSize: "0.78rem", fontWeight: 700, color: "#0F172A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {rec.maintenanceType}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                                <SpeedTwoTone sx={{ fontSize: 12, color: "#94A3B8" }} />
+                                {rec.odometerAtMaintenance.toLocaleString("en-IN")}
+                              </Box>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>
+                              {rec.nextDueOdometer ? (
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                                  <LoopTwoTone sx={{ fontSize: 12, color: "#94A3B8" }} />
+                                  {rec.nextDueOdometer.toLocaleString("en-IN")}
+                                </Box>
+                              ) : "—"}
+                            </TableCell>
+                            <TableCell>
+                              {MaintIcon ? (
+                                <Chip
+                                  size="small"
+                                  icon={<MaintIcon sx={{ fontSize: "11px !important", color: `${maintStatus.iconColor} !important` }} />}
+                                  label={maintStatus.label}
+                                  sx={{ bgcolor: maintStatus.bg, color: maintStatus.color, fontWeight: 700, fontSize: "0.65rem", borderRadius: "6px", height: "20px", border: `1px solid ${maintStatus.border}` }}
+                                />
+                              ) : (
+                                <Typography sx={{ fontSize: "0.78rem", color: "#CBD5E1" }}>—</Typography>
+                              )}
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700, fontSize: "0.78rem" }}>
+                              {rec.cost ? (
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.3 }}>
+                                  <CurrencyRupeeTwoTone sx={{ fontSize: 12, color: "#94A3B8" }} />
+                                  {rec.cost.toLocaleString("en-IN")}
+                                </Box>
+                              ) : <Typography sx={{ color: "#CBD5E1", fontSize: "0.78rem" }}>—</Typography>}
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                size="small"
+                                icon={
+                                  rec.hasHardCopy
+                                    ? <PrintTwoTone sx={{ fontSize: "11px !important", color: "#166534 !important" }} />
+                                    : <PrintDisabledTwoTone sx={{ fontSize: "11px !important", color: "#94A3B8 !important" }} />
+                                }
+                                label={rec.hasHardCopy ? "Hard Copy" : "Digital"}
+                                sx={{
+                                  bgcolor: rec.hasHardCopy ? "#DCFCE7" : "#F1F5F9",
+                                  color: rec.hasHardCopy ? "#166534" : "#64748B",
+                                  fontWeight: 700,
+                                  fontSize: "0.65rem",
+                                  borderRadius: "6px",
+                                  height: "20px",
+                                }}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+
             </DialogContent>
           </>
         )}
       </Dialog>
+
 
       {/* Add/Edit Dialog */}
       <Dialog
@@ -1564,6 +2101,69 @@ export default function BusManagementPage() {
                   }}
                 />
               </Grid>
+
+              {/* GST Owner */}
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  required
+                  select
+                  label="GST Owner"
+                  value={formData.gstOwner}
+                  onChange={(e) =>
+                    setFormData({ ...formData, gstOwner: e.target.value })
+                  }
+                  InputProps={{ sx: { borderRadius: "12px" } }}
+                >
+                  <MenuItem value="Chintan">Chintan</MenuItem>
+                  <MenuItem value="Harsh">Harsh</MenuItem>
+                </TextField>
+              </Grid>
+
+              {/* Hypothecation Status */}
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  required
+                  select
+                  label="Hypothecation Status"
+                  value={formData.hypothecation}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      hypothecation: e.target.value,
+                      hypothecationBank:
+                        e.target.value === "without"
+                          ? ""
+                          : formData.hypothecationBank,
+                    });
+                  }}
+                  InputProps={{ sx: { borderRadius: "12px" } }}
+                >
+                  <MenuItem value="without">Without Hypothecation</MenuItem>
+                  <MenuItem value="with">With Hypothecation</MenuItem>
+                </TextField>
+              </Grid>
+
+              {/* Hypothecation Bank — only if "with" */}
+              {formData.hypothecation === "with" && (
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Hypothecation Bank"
+                    placeholder="e.g. HDFC Bank, ICICI Bank, SBI…"
+                    value={formData.hypothecationBank}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        hypothecationBank: e.target.value,
+                      })
+                    }
+                    InputProps={{ sx: { borderRadius: "12px" } }}
+                  />
+                </Grid>
+              )}
             </Grid>
           </DialogContent>
           <DialogActions sx={{ p: 3, pt: 0 }}>

@@ -84,20 +84,19 @@ export const approveStudent = async (token, studentId, approvalData) => {
 };
 
 /**
- * PATCH /api/admin/students/:id/reject
+ * DELETE /api/admin/students/:id
  */
-export const rejectStudent = async (token, studentId, reason = '') => {
+export const deleteStudent = async (token, studentId) => {
   const response = await fetch(
-    `${API_BASE_URL}/admin/students/${studentId}/reject`,
+    `${API_BASE_URL}/admin/students/${studentId}`,
     {
-      method: "PATCH",
+      method: "DELETE",
       headers: authHeaders(token),
-      body: JSON.stringify({ reason }),
     }
   );
 
   if (!response.ok) {
-    let errorMessage = "Failed to reject student";
+    let errorMessage = "Failed to delete student";
     try {
       const data = await response.json();
       if (data && data.message) errorMessage = data.message;
@@ -109,52 +108,6 @@ export const rejectStudent = async (token, studentId, reason = '') => {
 
   return response.json();
 };
-
-/**
- * GET /api/admin/students/rejected
- */
-export const fetchRejectedStudents = async (token, page = 1, limit = 50) => {
-  const response = await fetch(
-    `${API_BASE_URL}/admin/students/rejected?page=${page}&limit=${limit}`,
-    { headers: authHeaders(token) }
-  );
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || "Failed to fetch rejected students");
-  }
-  return response.json();
-};
-
-/**
- * POST /api/admin/rejected-students/:id/restore
- */
-export const restoreRejectedStudent = async (token, id) => {
-  const response = await fetch(
-    `${API_BASE_URL}/admin/rejected-students/${id}/restore`,
-    { method: "POST", headers: authHeaders(token) }
-  );
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || "Failed to restore student");
-  }
-  return response.json();
-};
-
-/**
- * DELETE /api/admin/rejected-students/:id
- */
-export const permanentDeleteRejected = async (token, id) => {
-  const response = await fetch(
-    `${API_BASE_URL}/admin/rejected-students/${id}`,
-    { method: "DELETE", headers: authHeaders(token) }
-  );
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || "Failed to delete record");
-  }
-  return response.json();
-};
-
 
 /**
  * POST /api/admin/students/:id/update-photo
@@ -211,8 +164,88 @@ export const updateStaffPhoto = async (token, staffId, photoBase64) => {
 };
 
 /**
- * GET /api/admin/payment-stats
+ * PATCH /api/admin/staff-payments/:id/amount
+ * Update the amount of a pending staff payment entry
  */
+export const updateStaffPaymentAmount = async (token, paymentId, amount) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/staff-payments/${paymentId}/amount`,
+    {
+      method: "PATCH",
+      headers: authHeaders(token),
+      body: JSON.stringify({ amount }),
+    }
+  );
+
+  if (!response.ok) {
+    let errorMessage = "Failed to update payment amount";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+/**
+ * PATCH /api/admin/staff-payments/:id/details
+ * Update UTR, account, notes, or amount on any staff payment (including approved)
+ */
+export const updateStaffPaymentDetails = async (token, paymentId, updates) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/staff-payments/${paymentId}/details`,
+    {
+      method: "PATCH",
+      headers: authHeaders(token),
+      body: JSON.stringify(updates),
+    }
+  );
+
+  if (!response.ok) {
+    let errorMessage = "Failed to update payment details";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+/**
+ * DELETE /api/admin/staff-payments/:id
+ * Delete a staff payment entry entirely
+ */
+export const deleteStaffPayment = async (token, paymentId) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/staff-payments/${paymentId}`,
+    {
+      method: "DELETE",
+      headers: authHeaders(token),
+    }
+  );
+
+  if (!response.ok) {
+    let errorMessage = "Failed to delete payment";
+    try {
+      const data = await response.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
 export const fetchPaymentStats = async (token) => {
   const response = await fetch(`${API_BASE_URL}/admin/payment-stats`, {
     headers: authHeaders(token),
@@ -300,13 +333,13 @@ export const fetchAnalytics = async (token, filters = {}) => {
 export const fetchApprovedStudents = async (token, filters = {}) => {
   const params = new URLSearchParams();
   if (filters.year) params.set("year", filters.year);
-  if (filters.shift) params.set("shift", filters.shift);
   if (filters.department) params.set("department", filters.department);
   if (filters.route) params.set("route", filters.route);
-  if (filters.settlement) params.set("settlement", filters.settlement);
-  if (filters.validityDateTo) params.set("validityDateTo", filters.validityDateTo);
+  if (filters.approvedDateFrom) params.set("approvedDateFrom", filters.approvedDateFrom);
+  if (filters.approvedDateTo) params.set("approvedDateTo", filters.approvedDateTo);
   if (filters.searchName) params.set("searchName", filters.searchName);
   if (filters.searchReceipt) params.set("searchReceipt", filters.searchReceipt);
+  if (filters.searchMobile) params.set("searchMobile", filters.searchMobile);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.limit) params.set("limit", String(filters.limit));
 
@@ -1242,6 +1275,179 @@ export const createManualStaffPayment = async (token, paymentData) => {
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.message || "Failed to create manual payment");
+  }
+  return response.json();
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bus Documents
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/bus-documents/:busId
+ */
+export const fetchBusDocuments = async (token, busId) => {
+  const response = await fetch(`${API_BASE_URL}/bus-documents/${busId}`, {
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch bus documents");
+  }
+  return response.json();
+};
+
+/**
+ * POST /api/bus-documents
+ * body: { busId, title, expiryDate, photoBase64 }
+ */
+export const addBusDocument = async (token, data) => {
+  const response = await fetch(`${API_BASE_URL}/bus-documents`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.message || "Failed to add document");
+  }
+  return response.json();
+};
+
+/**
+ * DELETE /api/bus-documents/:id
+ */
+export const deleteBusDocument = async (token, docId) => {
+  const response = await fetch(`${API_BASE_URL}/bus-documents/${docId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to delete document");
+  }
+  return response.json();
+};
+
+/**
+ * PUT /api/bus-documents/:id
+ * body: { title, expiryDate, hasHardCopy }
+ */
+export const updateBusDocument = async (token, docId, data) => {
+  const response = await fetch(`${API_BASE_URL}/bus-documents/${docId}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.message || "Failed to update document");
+  }
+  return response.json();
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bus Maintenance
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/bus-maintenance/:busId
+ */
+export const fetchBusMaintenance = async (token, busId) => {
+  const response = await fetch(`${API_BASE_URL}/bus-maintenance/${busId}`, {
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch maintenance records");
+  }
+  return response.json();
+};
+
+/**
+ * POST /api/bus-maintenance
+ * body: { busId, maintenanceType, datePerformed, odometerAtMaintenance, intervalKm,
+ *         nextDueOdometer, cost, notes, billPhotoBase64 }
+ */
+export const addBusMaintenance = async (token, data) => {
+  const response = await fetch(`${API_BASE_URL}/bus-maintenance`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.message || "Failed to add maintenance record");
+  }
+  return response.json();
+};
+
+/**
+ * DELETE /api/bus-maintenance/:id
+ */
+export const deleteBusMaintenance = async (token, recordId) => {
+  const response = await fetch(`${API_BASE_URL}/bus-maintenance/${recordId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to delete maintenance record");
+  }
+  return response.json();
+};
+
+/**
+ * PUT /api/bus-maintenance/:id
+ * body: { maintenanceType, datePerformed, odometerAtMaintenance, intervalKm,
+ *         nextDueOdometer, cost, notes, hasHardCopy }
+ */
+export const updateBusMaintenance = async (token, recordId, data) => {
+  const response = await fetch(`${API_BASE_URL}/bus-maintenance/${recordId}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.message || "Failed to update maintenance record");
+  }
+  return response.json();
+};
+
+/**
+ * GET /api/bus-maintenance/alerts?busId= (optional)
+ * Returns per-bus maintenance alert status comparing latest odometer
+ * against nextDueOdometer for all maintenance records.
+ */
+export const fetchMaintenanceAlerts = async (token, busId = "") => {
+  const params = new URLSearchParams();
+  if (busId) params.set("busId", busId);
+  const qs = params.toString();
+  const url = `${API_BASE_URL}/bus-maintenance/alerts${qs ? `?${qs}` : ""}`;
+  const response = await fetch(url, {
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch maintenance alerts");
+  }
+  return response.json();
+};
+
+/**
+ * GET /api/admin/staff-payments/pending-summary
+ * Returns all staff with pending payment counts and total pending amounts,
+ * sorted by totalPending DESC. Used for sort-by-pending and Excel export.
+ */
+export const fetchStaffPendingSummary = async (token) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/staff-payments/pending-summary`,
+    { headers: authHeaders(token) }
+  );
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to fetch staff pending summary");
   }
   return response.json();
 };

@@ -97,3 +97,28 @@ export const searchStudentByPickupPoint = async (pickupPointLabel, token) => {
 
   return response.json();
 };
+
+export const searchStudentByDepartment = async (department, token) => {
+  const response = await fetch(`${API_BASE_URL}/students/checker/department/${encodeURIComponent(department)}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to fetch student details";
+    try {
+      const data = await response.json();
+      if (data && data.message) {
+        errorMessage = data.message;
+      }
+    } catch (e) {
+      errorMessage = `Server Error: ${response.status} ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};

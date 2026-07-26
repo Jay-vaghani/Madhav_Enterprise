@@ -14,7 +14,6 @@ import {
 } from "@mui/material";
 import {
   PrintOutlined,
-  DownloadOutlined,
   PeopleAltOutlined,
   RestartAltOutlined,
   CalendarTodayOutlined,
@@ -24,13 +23,11 @@ import {
   BadgeOutlined,
   PhoneOutlined,
 } from "@mui/icons-material";
-import XLSX from "xlsx-js-style";
 import {
   fetchApprovedStudents,
   fetchReceiptForReprint,
   fetchAllDepartments,
   fetchAllPickupPoints,
-  fetchAllShifts,
 } from "../../../api/admin/api";
 import { useAuth } from "../context/AuthContext";
 import ReceiptDialog from "../components/ReceiptDialog";
@@ -141,13 +138,11 @@ export default function ApprovedStudentsPage() {
 
   // ── Filter state ──────────────────────────────────────────────
   const [year, setYear] = useState("");
-  const [shift, setShift] = useState("");
   const [department, setDept] = useState("");
   const [route, setRoute] = useState("");
-  const [settlement, setSettlement] = useState("");
-  const [validityDateTo, setValidityDateTo] = useState("");
   const [searchName, setSearchName] = useState("");
   const [searchReceipt, setSearchReceipt] = useState("");
+  const [searchMobile, setSearchMobile] = useState("");
   const [appliedFilters, setAppliedFilters] = useState({});
 
   // ── Data state ────────────────────────────────────────────────
@@ -162,7 +157,6 @@ export default function ApprovedStudentsPage() {
   // ── Filter options fetched from backend ──────────────────────
   const [allDepts, setAllDepts] = useState([]);
   const [allRoutes, setAllRoutes] = useState([]);
-  const [allShifts, setAllShifts] = useState([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
 
   useEffect(() => {
@@ -171,9 +165,8 @@ export default function ApprovedStudentsPage() {
     Promise.all([
       fetchAllDepartments(token).catch(() => ({ departments: [] })),
       fetchAllPickupPoints(token).catch(() => ({ pickupPoints: [] })),
-      fetchAllShifts(token).catch(() => ({ shifts: [] })),
     ])
-      .then(([deptRes, routeRes, shiftRes]) => {
+      .then(([deptRes, routeRes]) => {
         setAllDepts(
           (deptRes.departments || [])
             .filter((d) => d.isActive !== false)
@@ -187,9 +180,6 @@ export default function ApprovedStudentsPage() {
             .map((p) => p.label)
             .filter(Boolean)
             .sort(),
-        );
-        setAllShifts(
-          (shiftRes.shifts || []).filter((s) => s.isActive !== false),
         );
       })
       .finally(() => setOptionsLoading(false));
@@ -234,23 +224,19 @@ export default function ApprovedStudentsPage() {
   const handleApply = () =>
     setAppliedFilters({
       year,
-      shift,
       department,
       route,
-      settlement,
-      validityDateTo,
       searchName,
       searchReceipt,
+      searchMobile,
     });
   const handleReset = () => {
     setYear("");
-    setShift("");
     setDept("");
     setRoute("");
-    setSettlement("");
-    setValidityDateTo("");
     setSearchName("");
     setSearchReceipt("");
+    setSearchMobile("");
     setAppliedFilters({});
   };
   const handleLoadMore = () => loadStudents(page + 1, true);
@@ -283,143 +269,6 @@ export default function ApprovedStudentsPage() {
       prev.map((s) =>
         s._id === updated._id ? { ...s, ...updated, payment: s.payment } : s,
       ),
-    );
-  };
-
-  const handleExport = () => {
-    if (!students.length) return;
-
-    const sorted = [...students].sort((a, b) =>
-      (a.receiptNumber || "").localeCompare(b.receiptNumber || "", undefined, {
-        numeric: true,
-      }),
-    );
-
-    const rows = sorted.map((s) => {
-      const p = s.payment || {};
-      const pm = p.paymentMethod;
-      const cashAmt =
-        pm === "cash" || pm === "both" ? p.cashAmount || p.amount || 0 : "";
-      const bankAmt =
-        pm === "bank" || pm === "both" ? p.bankAmount || p.amount || 0 : "";
-      const txns = [p.transaction1, p.transaction2]
-        .filter(Boolean)
-        .join(" || ");
-      let accountLabel = "";
-      if (pm === "cash") {
-        accountLabel = "Cash";
-      } else if (pm === "bank") {
-        accountLabel = p.settlementAccount === "C" ? "Account C" : "Account H";
-      } else if (pm === "both") {
-        const acc = p.settlementAccount === "C" ? "Account C" : "Account H";
-        accountLabel = `${acc}, Cash`;
-      }
-      return {
-        "Date of Approval": fmtDate(s.approvedAt),
-        "Receipt No.": s.receiptNumber,
-        "Full Name": s.fullName,
-        Year: YEAR_LABEL[s.year] || s.year,
-        Department: s.department?.label || "",
-        Semester: s.semester || "",
-        Shift: formatShift(s.shift),
-        "Pickup Point": s.pickupPoint?.label || "",
-        "Total Fees": p.amount || "",
-        CASH: cashAmt,
-        BANK: bankAmt,
-        "Payment Mode": pm ? pm.charAt(0).toUpperCase() + pm.slice(1) : "",
-        "Transaction IDs": txns,
-        "Validity Date": fmtDate(s.validityDate),
-        "Parents Phone": s.guardianMobile || "",
-        "Student Phone": s.mobile || "",
-        ImageUrl: s.photoUrl || "",
-        "Enrollment Number": s.enrollmentNumber || "",
-        Account: accountLabel,
-      };
-    });
-
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const headers = Object.keys(rows[0]);
-    const BLUE = "2563EB";
-    const WHITE = "FFFFFF";
-    const BORDER_COLOR = "E2E8F0";
-    const STRIPE = "F8FAFC";
-    const DARK_TEXT = "0F172A";
-    const headerStyle = {
-      font: { name: "Calibri", sz: 11, bold: true, color: { rgb: WHITE } },
-      fill: { fgColor: { rgb: BLUE }, patternType: "solid" },
-      alignment: { horizontal: "center", vertical: "center", wrapText: true },
-      border: {
-        top: { style: "thin", color: { rgb: BLUE } },
-        bottom: { style: "thin", color: { rgb: BLUE } },
-        left: { style: "thin", color: { rgb: BLUE } },
-        right: { style: "thin", color: { rgb: BLUE } },
-      },
-    };
-    const dataStyleEven = {
-      font: { name: "Calibri", sz: 10, color: { rgb: DARK_TEXT } },
-      fill: { fgColor: { rgb: WHITE }, patternType: "solid" },
-      alignment: { vertical: "center", wrapText: false },
-      border: {
-        top: { style: "thin", color: { rgb: BORDER_COLOR } },
-        bottom: { style: "thin", color: { rgb: BORDER_COLOR } },
-        left: { style: "thin", color: { rgb: BORDER_COLOR } },
-        right: { style: "thin", color: { rgb: BORDER_COLOR } },
-      },
-    };
-    const dataStyleOdd = {
-      ...dataStyleEven,
-      fill: { fgColor: { rgb: STRIPE }, patternType: "solid" },
-    };
-    const currencyStyle = {
-      font: { name: "Calibri", sz: 10, color: { rgb: DARK_TEXT } },
-      alignment: { horizontal: "right", vertical: "center" },
-      numFmt: "#,##0",
-    };
-    for (let c = 0; c < headers.length; c++) {
-      const cellRef = XLSX.utils.encode_cell({ r: 0, c });
-      if (ws[cellRef]) ws[cellRef].s = headerStyle;
-    }
-    const currencyCols = ["Total Fees", "CASH", "BANK"];
-    for (let r = 1; r <= rows.length; r++) {
-      const isOdd = r % 2 === 1;
-      const baseStyle = isOdd ? dataStyleOdd : dataStyleEven;
-      for (let c = 0; c < headers.length; c++) {
-        const cellRef = XLSX.utils.encode_cell({ r, c });
-        if (ws[cellRef]) {
-          const hdr = headers[c];
-          ws[cellRef].s = currencyCols.includes(hdr)
-            ? { ...baseStyle, ...currencyStyle }
-            : baseStyle;
-        }
-      }
-    }
-    ws["!cols"] = headers.map((h) => {
-      if (h === "ImageUrl") return { wch: 45 };
-      if (h === "Transaction IDs") return { wch: 28 };
-      if (h === "Full Name" || h === "Pickup Point") return { wch: 22 };
-      if (h === "Department") return { wch: 18 };
-      if (h === "Parents Phone" || h === "Student Phone") return { wch: 15 };
-      if (h === "Date of Approval" || h === "Validity Date") return { wch: 14 };
-      if (h === "Receipt No." || h === "Enrollment Number") return { wch: 14 };
-      if (h === "Account") return { wch: 18 };
-      if (currencyCols.includes(h)) return { wch: 12 };
-      return { wch: 13 };
-    });
-    ws["!rows"] = [{ hpx: 32 }];
-    for (let r = 1; r <= rows.length; r++) ws["!rows"].push({ hpx: 22 });
-    ws["!freeze"] = {
-      xSplit: 0,
-      ySplit: 1,
-      topLeftCell: "A2",
-      activePane: "bottomLeft",
-    };
-    const range = XLSX.utils.decode_range(ws["!ref"]);
-    ws["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Approved Students");
-    XLSX.writeFile(
-      wb,
-      `Approved_Students_${new Date().toISOString().slice(0, 10)}.xlsx`,
     );
   };
 
@@ -460,34 +309,6 @@ export default function ApprovedStudentsPage() {
             }}
           />
         </Box>
-        <Box
-          onClick={handleExport}
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            px: 2,
-            py: 1,
-            borderRadius: "10px",
-            border: "1.5px solid #E2E8F0",
-            bgcolor: "#fff",
-            cursor: "pointer",
-            transition: "all 0.15s ease",
-            "&:hover": { bgcolor: "#F8FAFC" },
-          }}
-        >
-          <DownloadOutlined sx={{ fontSize: 18, color: "#334155" }} />
-          <p
-            style={{
-              margin: 0,
-              fontSize: "0.83rem",
-              fontWeight: 600,
-              color: "#334155",
-            }}
-          >
-            Export
-          </p>
-        </Box>
       </Box>
 
       {/* Filter Bar */}
@@ -521,6 +342,20 @@ export default function ApprovedStudentsPage() {
               label="Receipt No"
               value={searchReceipt}
               onChange={(e) => setSearchReceipt(e.target.value)}
+              sx={selectSx}
+            />
+          </Grid>
+
+          {/* Mobile No — student or parent */}
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <TextField
+              size="small"
+              fullWidth
+              type="tel"
+              label="Mobile No"
+              placeholder="Student or Parent"
+              value={searchMobile}
+              onChange={(e) => setSearchMobile(e.target.value)}
               sx={selectSx}
             />
           </Grid>
@@ -574,49 +409,6 @@ export default function ApprovedStudentsPage() {
             />
           </Grid>
 
-          {/* Account — Autocomplete */}
-          <Grid size={{ xs: 12, sm: 3, md: 3 }}>
-            <Autocomplete
-              size="small"
-              fullWidth
-              options={[
-                { value: "C", label: "Account C" },
-                { value: "H", label: "Account H" },
-                { value: "cash", label: "Cash" },
-              ]}
-              getOptionLabel={(opt) =>
-                typeof opt === "string" ? opt : opt.label
-              }
-              isOptionEqualToValue={(opt, val) =>
-                typeof val === "string"
-                  ? opt.value === val
-                  : opt.value === val.value
-              }
-              value={
-                settlement
-                  ? [
-                      { value: "C", label: "Account C" },
-                      { value: "H", label: "Account H" },
-                      { value: "cash", label: "Cash" },
-                    ].find((o) => o.value === settlement) || null
-                  : null
-              }
-              onChange={(_, val) => setSettlement(val?.value || "")}
-              clearOnEscape
-              renderInput={(params) => (
-                <TextField {...params} label="Account" sx={selectSx} />
-              )}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  height: 40,
-                  borderRadius: "10px",
-                  fontSize: "0.83rem",
-                  bgcolor: "#fff",
-                },
-              }}
-            />
-          </Grid>
-
           {/* Route — Autocomplete */}
           <Grid size={{ xs: 12, sm: 3, md: 3 }}>
             <Autocomplete
@@ -632,64 +424,6 @@ export default function ApprovedStudentsPage() {
                 <TextField {...params} label="Route" sx={selectSx} />
               )}
               sx={{
-                "& .MuiOutlinedInput-root": {
-                  height: 40,
-                  borderRadius: "10px",
-                  fontSize: "0.83rem",
-                  bgcolor: "#fff",
-                },
-              }}
-            />
-          </Grid>
-
-          {/* Shift — Autocomplete from backend */}
-          <Grid size={{ xs: 12, sm: 3, md: 3 }}>
-            <Autocomplete
-              size="small"
-              fullWidth
-              options={allShifts}
-              getOptionLabel={(opt) =>
-                typeof opt === "string"
-                  ? opt
-                  : `${opt.label}${opt.time ? ` (${opt.time})` : ""}`
-              }
-              isOptionEqualToValue={(opt, val) =>
-                typeof val === "string" ? opt.id === val : opt.id === val.id
-              }
-              value={
-                shift
-                  ? allShifts.find((s) => s.id === shift) || null
-                  : null
-              }
-              onChange={(_, val) => setShift(val?.id || "")}
-              loading={optionsLoading}
-              loadingText="Loading..."
-              clearOnEscape
-              renderInput={(params) => (
-                <TextField {...params} label="Shift" sx={selectSx} />
-              )}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  height: 40,
-                  borderRadius: "10px",
-                  fontSize: "0.83rem",
-                  bgcolor: "#fff",
-                },
-              }}
-            />
-          </Grid>
-
-          {/* Validity To — date picker */}
-          <Grid size={{ xs: 12, sm: 3, md: 3 }}>
-            <TextField
-              size="small"
-              fullWidth
-              type="date"
-              value={validityDateTo}
-              onChange={(e) => setValidityDateTo(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                ...selectSx,
                 "& .MuiOutlinedInput-root": {
                   height: 40,
                   borderRadius: "10px",

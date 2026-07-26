@@ -380,7 +380,7 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
   .row {
     display: flex;
     align-items: baseline;
-    font-size: 9.5pt;
+    font-size: 9pt;
     line-height: 1.5;
   }
   .row-label {
@@ -407,7 +407,7 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
 
   /* Name — BIGGEST font */
   .row-name {
-    font-size: 9.5pt;
+    font-size: 9pt;
     text-transform: uppercase;
   }
   .row-name .row-value {
@@ -422,7 +422,7 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
   .row-yse .col-year {
     display: flex;
     align-items: baseline;
-    font-size: 9.5pt;
+    font-size: 9pt;
     line-height: 1.5;
     width: 50mm;
     flex-shrink: 0;
@@ -430,7 +430,7 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
   .row-yse .col-sem {
     display: flex;
     align-items: baseline;
-    font-size: 9.5pt;
+    font-size: 9pt;
     line-height: 1.5;
     width: 50mm;
     flex-shrink: 0;
@@ -438,7 +438,7 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
   .row-yse .col-enroll {
     display: flex;
     align-items: baseline;
-    font-size: 9.5pt;
+    font-size: 9pt;
     line-height: 1.5;
     flex: 1;
   }
@@ -451,14 +451,14 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
   .row-ba .col-branch {
     display: flex;
     align-items: baseline;
-    font-size: 9.5pt;
+    font-size: 9pt;
     line-height: 1.5;
     flex: 1;
   }
   .row-ba .col-acyr {
     display: flex;
     align-items: baseline;
-    font-size: 9.5pt;
+    font-size: 9pt;
     line-height: 1.5;
     width: 42mm;
     flex-shrink: 0;
@@ -472,14 +472,14 @@ export default function ReceiptDialog({ open, receiptData, onClose }) {
   .row-pa .col-pay {
     display: flex;
     align-items: baseline;
-    font-size: 9.5pt;
+    font-size: 9pt;
     line-height: 1.5;
     flex: 1;
   }
   .row-pa .col-amt {
     display: flex;
     align-items: baseline;
-    font-size: 9.5pt;
+    font-size: 9pt;
     line-height: 1.5;
     width: 38mm;
     flex-shrink: 0;

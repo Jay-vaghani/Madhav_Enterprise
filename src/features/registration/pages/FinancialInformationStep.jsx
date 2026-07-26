@@ -14,7 +14,7 @@ import { Place, InfoOutlined } from "@mui/icons-material";
 import { useRegistration } from "../context/RegistrationContext";
 
 export default function FinancialInformationStep() {
-  const { formData, updateFormData, pickupPoints, settingsLoading, settingsError } = useRegistration();
+  const { formData, updateFormData, pickupPoints, settingsLoading, settingsError, retryLoadSettings } = useRegistration();
 
   const { control, watch } = useForm({
     defaultValues: {
@@ -105,11 +105,19 @@ export default function FinancialInformationStep() {
                       sx={{
                         "& .MuiOutlinedInput-root": {
                           borderRadius: "12px",
-                          bgcolor: "#F8FAFC",
+                          bgcolor: !field.value ? "#EFF6FF" : "#F8FAFC",
                           pl: "36px", // indent text to make room for the icon
-                          "& fieldset": { borderColor: "#E2E8F0" },
-                          "&:hover fieldset": { borderColor: "#CBD5E1" },
-                          "&.Mui-focused fieldset": { borderColor: "#2563EB" },
+                          "& fieldset": { 
+                            borderColor: !field.value ? "#60A5FA" : "#E2E8F0",
+                            borderWidth: !field.value ? "2px" : "1px"
+                          },
+                          "&:hover fieldset": { 
+                            borderColor: !field.value ? "#3B82F6" : "#CBD5E1" 
+                          },
+                          "&.Mui-focused fieldset": { 
+                            borderColor: "#2563EB", 
+                            borderWidth: "2px" 
+                          },
                         },
                       }}
                     />
@@ -129,7 +137,7 @@ export default function FinancialInformationStep() {
             </Box>
           )}
 
-          {settingsError && (
+          {settingsError && pickupPoints.length === 0 && (
             <Box
               sx={{
                 mt: 2,
@@ -138,11 +146,15 @@ export default function FinancialInformationStep() {
                 borderRadius: "12px",
                 px: 2,
                 py: 1.5,
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
               }}
             >
               <Typography variant="body2" color="error">
-                {settingsError}
+                Failed to load pickup points.
               </Typography>
+              <button onClick={retryLoadSettings} style={{ fontSize: "0.78rem", fontWeight: 700, color: "#2563EB", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Retry</button>
             </Box>
           )}
 

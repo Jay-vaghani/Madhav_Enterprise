@@ -39,24 +39,15 @@ export default function StaffPaymentPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [uploadingMonthId, setUploadingMonthId] = useState(null);
-  const [bookmarked, setBookmarked] = useState(false);
   const [bookmarkDismissed, setBookmarkDismissed] = useState(
     () => localStorage.getItem("bookmarkDismissed") === "true",
   );
   const [successMsg, setSuccessMsg] = useState("");
 
   const handleBookmark = () => {
-    if (window.sidebar && window.sidebar.addPanel) {
-      // Firefox old
-      window.sidebar.addPanel(document.title, window.location.href, "");
-    } else if (window.external && "AddFavorite" in window.external) {
-      // IE
-      window.external.AddFavorite(window.location.href, document.title);
-    } else {
-      // Modern browsers — instruct the user
-      setBookmarked(true);
-      setTimeout(() => setBookmarked(false), 3000);
-    }
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const shortcut = isMac ? '⌘ + D' : 'Ctrl + D';
+    alert(`Your browser does not support automatic bookmarking. Please press ${shortcut} to bookmark this page.`);
   };
 
   const dismissBookmark = () => {
@@ -215,7 +206,7 @@ export default function StaffPaymentPage() {
             Portal
           </Typography>
           <Typography sx={{ color: "#64748B", mt: 1, fontSize: "0.9rem" }}>
-            Upload your monthly transport fee screenshots
+            Check your monthly fee status & visit transportation office for payments
           </Typography>
         </Box>
         {/* ── Bookmark Banner ──────────────────────────────────────────── */}
@@ -264,37 +255,25 @@ export default function StaffPaymentPage() {
               </Typography>
             </Box>
             <Box sx={{ display: "flex", gap: 1, flexShrink: 0 }}>
-              <Tooltip
-                title={
-                  bookmarked
-                    ? "Check your browser toolbar!"
-                    : "Bookmark this page"
-                }
-              >
+              <Tooltip title="Bookmark this page">
                 <Button
                   size="small"
                   variant="contained"
                   onClick={handleBookmark}
-                  startIcon={
-                    bookmarked ? (
-                      <BookmarkAdded fontSize="small" />
-                    ) : (
-                      <BookmarkBorderOutlined fontSize="small" />
-                    )
-                  }
+                  startIcon={<BookmarkBorderOutlined fontSize="small" />}
                   sx={{
                     textTransform: "none",
                     fontWeight: 600,
                     fontSize: "0.78rem",
                     borderRadius: "8px",
-                    bgcolor: bookmarked ? "#10B981" : "#F59E0B",
-                    "&:hover": { bgcolor: bookmarked ? "#059669" : "#D97706" },
+                    bgcolor: "#F59E0B",
+                    "&:hover": { bgcolor: "#D97706" },
                     boxShadow: "none",
                     transition: "all 0.2s ease",
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {bookmarked ? "Bookmarked!" : "Bookmark"}
+                  Bookmark
                 </Button>
               </Tooltip>
               <Button
@@ -392,8 +371,7 @@ export default function StaffPaymentPage() {
                     lineHeight: 1.6,
                   }}
                 >
-                  Enter your registered mobile number to view and upload your
-                  monthly payment screenshots.
+                  Enter your registered mobile number to check your monthly transport fee status.
                 </Typography>
               </Box>
 
@@ -571,6 +549,43 @@ export default function StaffPaymentPage() {
                 )}
               </Box>
 
+              {/* Transportation Office Notice Banner */}
+              {payments.length > 0 && (
+                <Box
+                  sx={{
+                    mb: 2.5,
+                    p: 2,
+                    bgcolor: "#FFFBEB",
+                    border: "1.5px solid #FCD34D",
+                    borderRadius: "16px",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 1.5,
+                  }}
+                >
+                  <InfoOutlined
+                    sx={{ color: "#D97706", fontSize: 22, mt: 0.2, flexShrink: 0 }}
+                  />
+                  <Box>
+                    <Typography
+                      sx={{ fontWeight: 700, fontSize: "0.88rem", color: "#92400E" }}
+                    >
+                      Payment Screenshot Upload Temporarily Suspended
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: "0.82rem",
+                        color: "#B45309",
+                        mt: 0.4,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      Please visit the <strong>Transportation Office</strong> in person to pay your monthly fees and get details about updated fee revisions for next month.
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+
               {payments.length === 0 ? (
                 <Box
                   sx={{
@@ -675,42 +690,19 @@ export default function StaffPaymentPage() {
                             }}
                           />
                         ) : (
-                          <Button
-                            component="label"
-                            variant="contained"
-                            disabled={uploadingMonthId === p._id}
+                          <Chip
+                            icon={<LocationOnOutlined style={{ fontSize: 14 }} />}
+                            label="Pay at Transport Office"
                             size="small"
-                            startIcon={
-                              uploadingMonthId === p._id ? (
-                                <CircularProgress size={14} color="inherit" />
-                              ) : (
-                                <CloudUploadOutlined sx={{ fontSize: 16 }} />
-                              )
-                            }
                             sx={{
-                              textTransform: "none",
                               fontWeight: 700,
-                              fontSize: "0.8rem",
-                              borderRadius: "10px",
-                              background:
-                                "linear-gradient(135deg, #2563EB, #1D4ED8)",
-                              boxShadow: "0 2px 8px rgba(37,99,235,0.25)",
-                              "&:hover": {
-                                background:
-                                  "linear-gradient(135deg, #1D4ED8, #1E40AF)",
-                              },
+                              bgcolor: "#FEF3C7",
+                              color: "#D97706",
+                              fontSize: "0.75rem",
+                              height: 28,
+                              "& .MuiChip-icon": { color: "#D97706" },
                             }}
-                          >
-                            {uploadingMonthId === p._id
-                              ? "Uploading..."
-                              : "Upload"}
-                            <input
-                              type="file"
-                              hidden
-                              accept="image/*"
-                              onChange={(e) => handleFileChange(e, p._id)}
-                            />
-                          </Button>
+                          />
                         )}
                       </Box>
                     </Box>

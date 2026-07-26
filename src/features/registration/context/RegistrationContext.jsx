@@ -75,30 +75,49 @@ export function RegistrationProvider({ children }) {
   // ── Active step (drives TabContext + MobileStepBar) ──────────
   const [activeStep, setActiveStep] = useState("1");
 
-  // ── Fetch settings on mount ─────────────────────────────────
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        setSettingsLoading(true);
-        const response = await getPublicSettings();
-        if (response.success) {
-          setSettings({
-            shifts: response.shifts || [],
-            departments: response.departments || [],
-            pickupPoints: response.pickupPoints || [],
-          });
-          setSettingsError(null);
-        }
-      } catch (error) {
-        console.error("Failed to load settings:", error);
-        setSettingsError(error.message);
-      } finally {
-        setSettingsLoading(false);
-      }
-    };
+  // ── Fetch settings on mount (with auto-retry) ──────────────
+  const loadSettings = useCallback(async (attempt = 0) => {
+    try {
+      setSettingsLoading(true);
+      setSettingsError(null);
+      const response = await getPublicSettings();
+      if (response.success) {
+        // Sometimes the API returns success but with empty arrays due to cold start
+        const deps = response.departments || [];
+        const pps = response.pickupPoints || [];
+        const shs = response.shifts || [];
 
-    loadSettings();
+        // If we got empty data and haven't exceeded retries, try again
+        if (deps.length === 0 && pps.length === 0 && attempt < 3) {
+          setTimeout(() => loadSettings(attempt + 1), 2000);
+          return;
+        }
+
+        setSettings({
+          shifts: shs,
+          departments: deps,
+          pickupPoints: pps,
+        });
+        setSettingsError(null);
+      } else {
+        throw new Error(response.message || "Failed to load settings");
+      }
+    } catch (error) {
+      console.error(`Settings load attempt ${attempt + 1} failed:`, error);
+      if (attempt < 3) {
+        // Auto-retry with back-off
+        setTimeout(() => loadSettings(attempt + 1), 2000 * (attempt + 1));
+      } else {
+        setSettingsError(error.message);
+      }
+    } finally {
+      setSettingsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   const updateFormData = useCallback((updates) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -123,6 +142,7 @@ export function RegistrationProvider({ children }) {
         years: YEARS,
         settingsLoading,
         settingsError,
+        retryLoadSettings: () => loadSettings(0),
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -23,6 +23,8 @@ import {
   CardContent,
   Avatar,
   InputAdornment,
+  InputLabel,
+  Divider,
   Autocomplete,
   CircularProgress,
 } from "@mui/material";
@@ -36,6 +38,8 @@ import {
   LocationOn as LocationIcon,
   Schedule as ScheduleIcon,
   Close as CloseIcon,
+  Search as SearchIcon,
+  CalendarTodayTwoTone,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -114,6 +118,46 @@ const SettingsPage = () => {
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Search
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filtered lists (frontend-only search)
+  const q = searchQuery.trim().toLowerCase();
+  const filteredShifts = useMemo(
+    () =>
+      q
+        ? shifts.filter(
+            (s) =>
+              s.label?.toLowerCase().includes(q) ||
+              s.time?.toLowerCase().includes(q) ||
+              s.emoji?.toLowerCase().includes(q),
+          )
+        : shifts,
+    [shifts, q],
+  );
+  const filteredDepartments = useMemo(
+    () =>
+      q
+        ? departments.filter(
+            (d) =>
+              d.label?.toLowerCase().includes(q) ||
+              d.id?.toLowerCase().includes(q),
+          )
+        : departments,
+    [departments, q],
+  );
+  const filteredPickupPoints = useMemo(
+    () =>
+      q
+        ? pickupPoints.filter(
+            (p) =>
+              p.label?.toLowerCase().includes(q) ||
+              String(p.fee || "").includes(q),
+          )
+        : pickupPoints,
+    [pickupPoints, q],
+  );
+
   // Snackbar
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -154,6 +198,7 @@ const SettingsPage = () => {
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+    setSearchQuery("");
   };
 
   // ═══════════════════════════════════════════════════════════════
@@ -168,7 +213,7 @@ const SettingsPage = () => {
     if (type === "shift") {
       setFormData({ label: "", time: "", emoji: "🚌", isActive: true });
     } else if (type === "department") {
-      setFormData({ label: "", defaultShift: null, isActive: true });
+      setFormData({ label: "", defaultShift: null, isActive: true, validityPresets: {} });
     } else {
       setFormData({ label: "", fee: "", isActive: true });
     }
@@ -186,9 +231,9 @@ const SettingsPage = () => {
     // For department, find the shift object if defaultShift is a string
     if (type === "department" && item.defaultShift) {
       const shiftObj = shifts.find(s => s.id === item.defaultShift || s.time === item.defaultShift || s.label === item.defaultShift);
-      setFormData({ ...item, defaultShift: shiftObj || item.defaultShift });
+      setFormData({ ...item, defaultShift: shiftObj || item.defaultShift, validityPresets: item.validityPresets || {} });
     } else {
-      setFormData({ ...item });
+      setFormData({ ...item, validityPresets: item.validityPresets || {} });
     }
     
     setOpenDialog(true);
@@ -340,9 +385,9 @@ const SettingsPage = () => {
   // Render Cards
   // ═══════════════════════════════════════════════════════════════
 
-  const renderShiftsCards = () => (
+  const renderShiftsCards = (items = shifts) => (
     <Grid container spacing={2}>
-      {shifts.length === 0 ? (
+      {items.length === 0 ? (
         <Grid size={12}>
           <Box sx={{ textAlign: "center", py: 6, color: "#64748B" }}>
             <ScheduleIcon sx={{ fontSize: 48, color: "#CBD5E1", mb: 2 }} />
@@ -350,8 +395,8 @@ const SettingsPage = () => {
           </Box>
         </Grid>
       ) : (
-        shifts.map((shift) => (
-          <Grid key={shift.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+        items.map((shift) => (
+          <Grid key={shift.id} size={{ xs: 12, sm: 6, md: 4, }}>
             <Card
               sx={{
                 borderRadius: 3,
@@ -438,9 +483,9 @@ const SettingsPage = () => {
     </Grid>
   );
 
-  const renderDepartmentsCards = () => (
+  const renderDepartmentsCards = (items = departments) => (
     <Grid container spacing={2}>
-      {departments.length === 0 ? (
+      {items.length === 0 ? (
         <Grid size={12}>
           <Box sx={{ textAlign: "center", py: 6, color: "#64748B" }}>
             <SchoolIcon sx={{ fontSize: 48, color: "#CBD5E1", mb: 2 }} />
@@ -448,8 +493,8 @@ const SettingsPage = () => {
           </Box>
         </Grid>
       ) : (
-        departments.map((dept) => (
-          <Grid key={dept.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+        items.map((dept) => (
+          <Grid key={dept.id} size={{ xs: 12, sm: 6, md: 4, }}>
             <Card
               sx={{
                 borderRadius: 3,
@@ -540,9 +585,9 @@ const SettingsPage = () => {
     </Grid>
   );
 
-  const renderPickupPointsCards = () => (
+  const renderPickupPointsCards = (items = pickupPoints) => (
     <Grid container spacing={2}>
-      {pickupPoints.length === 0 ? (
+      {items.length === 0 ? (
         <Grid size={12}>
           <Box sx={{ textAlign: "center", py: 6, color: "#64748B" }}>
             <LocationIcon sx={{ fontSize: 48, color: "#CBD5E1", mb: 2 }} />
@@ -550,8 +595,8 @@ const SettingsPage = () => {
           </Box>
         </Grid>
       ) : (
-        pickupPoints.map((point) => (
-          <Grid key={point.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+        items.map((point) => (
+          <Grid key={point.id} size={{ xs: 12, sm: 6, md: 4}}>
             <Card
               sx={{
                 borderRadius: 3,
@@ -646,13 +691,38 @@ const SettingsPage = () => {
 
   const renderDialogContent = () => {
     const isEdit = dialogMode === "edit";
+    const sharedInputSx = {
+      "& .MuiOutlinedInput-root": {
+        borderRadius: "12px",
+        bgcolor: "#F8FAFC",
+        transition: "all 0.2s",
+        "&:hover": { bgcolor: "#F1F5F9" },
+        "&.Mui-focused": {
+          bgcolor: "#FFFFFF",
+          boxShadow: `0 0 0 3px ${
+            itemType === "shift" ? "rgba(37,99,235,0.1)" :
+            itemType === "department" ? "rgba(22,163,74,0.1)" :
+            "rgba(217,119,6,0.1)"
+          }`,
+        },
+        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#E2E8F0" },
+        "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#CBD5E1" },
+        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+          borderColor: itemType === "shift" ? "#2563EB" :
+                      itemType === "department" ? "#16A34A" :
+                      "#D97706",
+        },
+      },
+    };
 
     return (
       <Box sx={{ pt: 1 }}>
         {/* Label - Common for all types */}
+        <InputLabel sx={{ fontWeight: 700, color: "#1E293B", fontSize: "0.82rem", mb: 0.75 }}>
+          Name *
+        </InputLabel>
         <TextField
           fullWidth
-          label="Label"
           placeholder={
             itemType === "shift"
               ? "e.g., Morning Shift"
@@ -663,21 +733,22 @@ const SettingsPage = () => {
           value={formData.label || ""}
           onChange={(e) => setFormData({ ...formData, label: e.target.value })}
           error={!!formErrors.label}
-          helperText={formErrors.label || "Display name"}
-          sx={{ mb: 3 }}
+          helperText={formErrors.label || ""}
+          sx={{ mb: 3, ...sharedInputSx }}
         />
 
         {itemType === "shift" && (
           <>
+            <InputLabel sx={{ fontWeight: 700, color: "#1E293B", fontSize: "0.82rem", mb: 0.75 }}>
+              Time *
+            </InputLabel>
             <TextField
               fullWidth
-              label="Time"
               type="time"
               value={formData.time || ""}
               onChange={(e) => setFormData({ ...formData, time: e.target.value })}
               error={!!formErrors.time}
-              helperText={formErrors.time || "Select shift time"}
-              sx={{ mb: 3 }}
+              sx={{ mb: formData.time ? 1 : 3, ...sharedInputSx }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -687,52 +758,171 @@ const SettingsPage = () => {
               }}
             />
             {formData.time && (
-              <Typography
-                variant="body2"
-                sx={{ mb: 2, color: "#2563EB", fontWeight: 600 }}
-              >
-                Formatted: {formatTime12h(formData.time)}
-              </Typography>
+              <Chip
+                size="small"
+                icon={<ScheduleIcon sx={{ fontSize: "14px !important" }} />}
+                label={formatTime12h(formData.time)}
+                sx={{
+                  mb: 2.5,
+                  bgcolor: "#EFF6FF",
+                  color: "#2563EB",
+                  fontWeight: 700,
+                  borderRadius: "8px",
+                }}
+              />
             )}
+            <InputLabel sx={{ fontWeight: 700, color: "#1E293B", fontSize: "0.82rem", mb: 0.75 }}>
+              Emoji
+            </InputLabel>
             <TextField
               fullWidth
-              label="Emoji"
               value={formData.emoji || ""}
               onChange={(e) => setFormData({ ...formData, emoji: e.target.value })}
-              helperText="Emoji icon for this shift"
-              sx={{ mb: 2 }}
+              helperText="Pick an icon for this shift"
+              sx={{ mb: 2, ...sharedInputSx }}
               inputProps={{ maxLength: 2 }}
             />
           </>
         )}
 
         {itemType === "department" && (
-          <Autocomplete
-            options={shifts}
-            value={formData.defaultShift || null}
-            getOptionLabel={(option) => {
-              if (!option) return "";
-              return `${option.emoji || "🚌"} ${option.label} (${formatTime12h(option.time)})`;
+          <>
+            <InputLabel sx={{ fontWeight: 700, color: "#1E293B", fontSize: "0.82rem", mb: 0.75 }}>
+              Default Shift
+            </InputLabel>
+            <Autocomplete
+              options={shifts}
+              value={formData.defaultShift || null}
+              getOptionLabel={(option) => {
+                if (!option) return "";
+                return `${option.emoji || "🚌"} ${option.label} (${formatTime12h(option.time)})`;
+              }}
+              onChange={(e, selected) => setFormData({ ...formData, defaultShift: selected })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Search shifts…"
+                  sx={{ mb: 3, ...sharedInputSx }}
+                />
+              )}
+              renderOption={(props, option) => (
+                <Box component="li" {...props} sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 0.5 }}>
+                  <Box sx={{ fontSize: "1.2rem" }}>{option.emoji || "🚌"}</Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: "0.88rem", color: "#1E293B" }}>
+                      {option.label}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    size="small"
+                    label={formatTime12h(option.time)}
+                    sx={{
+                      bgcolor: "#F1F5F9",
+                      color: "#475569",
+                      fontWeight: 700,
+                      fontSize: "0.72rem",
+                      borderRadius: "6px",
+                    }}
+                  />
+                </Box>
+              )}
+            />
+          </>
+        )}
+
+        {/* Validity Date Presets — Department only */}
+        {itemType === "department" && (
+          <Box
+            sx={{
+              mt: 1,
+              p: 2.5,
+              borderRadius: "18px",
+              bgcolor: "#F0FDF4",
+              border: "1px solid #BBF7D0",
             }}
-            onChange={(e, selected) => setFormData({ ...formData, defaultShift: selected })}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Default Shift"
-                placeholder="Search and select a shift..."
-                sx={{ mb: 3 }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+              <CalendarTodayTwoTone sx={{ fontSize: 16, color: "#16A34A" }} />
+              <Typography sx={{ fontWeight: 800, fontSize: "0.8rem", color: "#166534", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                Validity Date Presets
+              </Typography>
+              <Chip
+                size="small"
+                label="Optional"
+                sx={{
+                  ml: "auto",
+                  bgcolor: "#DCFCE7",
+                  color: "#166534",
+                  fontWeight: 700,
+                  fontSize: "0.65rem",
+                  borderRadius: "6px",
+                  height: "20px",
+                }}
               />
-            )}
-            renderOption={(props, option) => (
-              <Box component="li" {...props} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <span>{option.emoji || "🚌"}</span>
-                <span>{option.label}</span>
-                <span style={{ color: "#64748B", marginLeft: "auto" }}>
-                  {formatTime12h(option.time)}
-                </span>
-              </Box>
-            )}
-          />
+            </Box>
+            <Typography sx={{ fontSize: "0.75rem", color: "#64748B", mb: 2 }}>
+              Set default validity expiry dates per year. Matching chips glow during verification.
+            </Typography>
+            <Grid container spacing={1.5}>
+              {[
+                { value: "1", label: "First Year", color: "#3B82F6" },
+                { value: "2", label: "Second Year", color: "#8B5CF6" },
+                { value: "3", label: "Third Year", color: "#EC4899" },
+                { value: "4", label: "Fourth Year", color: "#F59E0B" },
+              ].map((yr) => (
+                <Grid size={{ xs: 6 }} key={yr.value}>
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: "12px",
+                      bgcolor: "white",
+                      border: "1px solid #E2E8F0",
+                      transition: "all 0.2s",
+                      "&:hover": { borderColor: yr.color, boxShadow: `0 2px 8px ${yr.color}15` },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1 }}>
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          bgcolor: yr.color,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Typography sx={{ fontWeight: 700, fontSize: "0.78rem", color: "#1E293B" }}>
+                        {yr.label}
+                      </Typography>
+                    </Box>
+                    <TextField
+                      fullWidth
+                      type="date"
+                      size="small"
+                      value={formData.validityPresets?.[yr.value] || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          validityPresets: {
+                            ...(formData.validityPresets || {}),
+                            [yr.value]: e.target.value,
+                          },
+                        })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      InputProps={{
+                        sx: {
+                          borderRadius: "10px",
+                          fontSize: "0.82rem",
+                          bgcolor: "#F8FAFC",
+                        },
+                      }}
+                    />
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
         )}
 
         {itemType === "pickupPoint" && (
@@ -750,7 +940,7 @@ const SettingsPage = () => {
             }}
             error={!!formErrors.fee}
             helperText={formErrors.fee || "Transport fee for this pickup point"}
-            sx={{ mb: 3 }}
+            sx={{ mb: 3, ...sharedInputSx }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -818,6 +1008,31 @@ const SettingsPage = () => {
         </Button>
       </Box>
 
+      {/* Search Bar */}
+      <TextField
+        fullWidth
+        size="small"
+        placeholder={`Search ${activeTab === 0 ? "shifts" : activeTab === 1 ? "departments" : "pickup points"}…`}
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon sx={{ fontSize: 18, color: "#94A3B8" }} />
+            </InputAdornment>
+          ),
+          endAdornment: searchQuery ? (
+            <InputAdornment position="end">
+              <IconButton size="small" onClick={() => setSearchQuery("")} sx={{ color: "#94A3B8" }}>
+                <CloseIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </InputAdornment>
+          ) : null,
+          sx: { borderRadius: "12px", bgcolor: "white", fontSize: "0.9rem" },
+        }}
+        sx={{ mb: 2 }}
+      />
+
       {/* Tabs */}
       <Paper
         sx={{
@@ -851,17 +1066,17 @@ const SettingsPage = () => {
           <Tab
             icon={<TimeIcon sx={{ mr: 1 }} />}
             iconPosition="start"
-            label={`Shifts (${shifts.length})`}
+            label={`Shifts (${filteredShifts.length}${q ? `/${shifts.length}` : ""})`}
           />
           <Tab
             icon={<SchoolIcon sx={{ mr: 1 }} />}
             iconPosition="start"
-            label={`Departments (${departments.length})`}
+            label={`Departments (${filteredDepartments.length}${q ? `/${departments.length}` : ""})`}
           />
           <Tab
             icon={<LocationIcon sx={{ mr: 1 }} />}
             iconPosition="start"
-            label={`Pickup Points (${pickupPoints.length})`}
+            label={`Pickup Points (${filteredPickupPoints.length}${q ? `/${pickupPoints.length}` : ""})`}
           />
         </Tabs>
 
@@ -883,7 +1098,7 @@ const SettingsPage = () => {
             Add Shift
           </Button>
           </Box>
-          {renderShiftsCards()}
+          {renderShiftsCards(filteredShifts)}
         </TabPanel>
 
         {/* Departments Tab */}
@@ -904,7 +1119,7 @@ const SettingsPage = () => {
               Add Department
             </Button>
           </Box>
-          {renderDepartmentsCards()}
+          {renderDepartmentsCards(filteredDepartments)}
         </TabPanel>
 
         {/* Pickup Points Tab */}
@@ -925,7 +1140,7 @@ const SettingsPage = () => {
               Add Pickup Point
             </Button>
           </Box>
-          {renderPickupPointsCards()}
+          {renderPickupPointsCards(filteredPickupPoints)}
         </TabPanel>
       </Paper>
 
@@ -935,29 +1150,88 @@ const SettingsPage = () => {
         onClose={handleCloseDialog}
         maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        PaperProps={{
+          sx: {
+            borderRadius: "24px",
+            overflow: "hidden",
+            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+          },
+        }}
       >
         <DialogTitle
           sx={{
-            fontWeight: 800,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            pb: 1,
+            p: 0,
+            m: 0,
           }}
         >
-          {dialogMode === "create" ? "Create" : "Edit"}{" "}
-          {itemType === "pickupPoint" ? "Pickup Point" : itemType === "department" ? "Department" : "Shift"}
-          <IconButton onClick={handleCloseDialog} size="small" sx={{ color: "#64748B" }}>
-            <CloseIcon />
-          </IconButton>
+          <Box
+            sx={{
+              px: 3,
+              py: 2.5,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              background:
+                itemType === "shift"
+                  ? "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)"
+                  : itemType === "department"
+                  ? "linear-gradient(135deg, #16A34A 0%, #15803D 100%)"
+                  : "linear-gradient(135deg, #D97706 0%, #B45309 100%)",
+              color: "white",
+            }}
+          >
+            <Box
+              sx={{
+                width: 42,
+                height: 42,
+                borderRadius: "12px",
+                bgcolor: "rgba(255,255,255,0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              {itemType === "shift" ? (
+                <TimeIcon sx={{ fontSize: 22 }} />
+              ) : itemType === "department" ? (
+                <SchoolIcon sx={{ fontSize: 22 }} />
+              ) : (
+                <LocationIcon sx={{ fontSize: 22 }} />
+              )}
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography sx={{ fontWeight: 800, fontSize: "1.1rem", lineHeight: 1.2 }}>
+                {dialogMode === "create" ? "Create" : "Edit"}{" "}
+                {itemType === "pickupPoint" ? "Pickup Point" : itemType === "department" ? "Department" : "Shift"}
+              </Typography>
+              {dialogMode === "edit" && selectedItem?.label && (
+                <Typography sx={{ fontSize: "0.75rem", opacity: 0.85, fontWeight: 500 }}>
+                  {selectedItem.label}
+                </Typography>
+              )}
+            </Box>
+            <IconButton
+              onClick={handleCloseDialog}
+              size="small"
+              sx={{ color: "rgba(255,255,255,0.8)", "&:hover": { bgcolor: "rgba(255,255,255,0.15)" } }}
+            >
+              <CloseIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Box>
         </DialogTitle>
-        <DialogContent>{renderDialogContent()}</DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
+        <DialogContent sx={{ p: 3, pt: 3 }}>{renderDialogContent()}</DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, pt: 0 }}>
           <Button
             onClick={handleCloseDialog}
             disabled={submitting}
-            sx={{ textTransform: "none", fontWeight: 600, color: "#64748B" }}
+            sx={{
+              textTransform: "none",
+              fontWeight: 600,
+              color: "#64748B",
+              borderRadius: "12px",
+              px: 3,
+            }}
           >
             Cancel
           </Button>
@@ -969,8 +1243,9 @@ const SettingsPage = () => {
             sx={{
               textTransform: "none",
               fontWeight: 700,
-              borderRadius: 2,
-              px: 3,
+              borderRadius: "12px",
+              px: 4,
+              py: 1.2,
               bgcolor:
                 itemType === "shift"
                   ? "#2563EB"
@@ -987,7 +1262,7 @@ const SettingsPage = () => {
               },
             }}
           >
-            {submitting ? "Saving..." : dialogMode === "create" ? "Create" : "Save Changes"}
+            {submitting ? "Saving…" : dialogMode === "create" ? "Create" : "Save Changes"}
           </Button>
         </DialogActions>
       </Dialog>

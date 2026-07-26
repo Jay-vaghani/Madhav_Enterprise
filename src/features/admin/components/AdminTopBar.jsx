@@ -22,7 +22,7 @@ export default function AdminTopBar() {
 
   const handleLogout = () => {
     logout();
-    navigate("/admin/login", { replace: true });
+    navigate("/admin", { replace: true });
   };
 
   const roleLabel = user?.role === "admin" ? "Super Administrator" : "Manager";

@@ -10,9 +10,11 @@ import {
   DialogContent,
   Chip,
   InputAdornment,
+  InputLabel,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { fetchStaffPickupPoints, registerStaff } from "../../../api/admin/api";
+import ImageCropModal from "../../../components/ImageCropModal";
 import {
   SchoolOutlined,
   PersonOutlined,
@@ -24,6 +26,9 @@ import {
   LocationOnOutlined,
   InfoOutlined,
   ArrowForwardOutlined,
+  PhotoCameraOutlined,
+  CloudUploadOutlined,
+  CalendarTodayOutlined,
 } from "@mui/icons-material";
 
 const SCHOOL_OPTIONS = [
@@ -54,12 +59,38 @@ export default function StaffRegistrationPage() {
     shift: "",
     residentialAddress: "",
     mobile: "",
+    joiningDate: "",
     pickupPoint: null,
   });
 
   const [fieldErrors, setFieldErrors] = useState({});
   const [serverError, setServerError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Photo Upload State
+  const [photoBase64, setPhotoBase64] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [cropSrc, setCropSrc] = useState(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [rawFile, setRawFile] = useState(null);
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = null;
+    setRawFile(file);
+    const url = URL.createObjectURL(file);
+    setCropSrc(url);
+    setCropOpen(true);
+  };
+
+  const handleCropComplete = (compressedBase64) => {
+    setCropOpen(false);
+    setCropSrc(null);
+    setPhotoBase64(compressedBase64);
+    setPhotoPreview(compressedBase64);
+    setFieldErrors((prev) => ({ ...prev, photo: "" }));
+  };
 
   useEffect(() => {
     const loadPoints = async () => {
@@ -92,8 +123,10 @@ export default function StaffRegistrationPage() {
       errs.residentialAddress = "Residential address is required.";
     if (!formData.mobile || formData.mobile.length !== 10)
       errs.mobile = "Valid 10-digit mobile number is required.";
+    if (!formData.joiningDate) errs.joiningDate = "Joining date is required.";
     if (!formData.shift) errs.shift = "Please select a shift time.";
     if (!formData.pickupPoint) errs.pickupPoint = "Pickup point is required.";
+    if (!photoBase64) errs.photo = "A recent passport size photo is required.";
     return errs;
   };
 
@@ -115,7 +148,9 @@ export default function StaffRegistrationPage() {
         shift: formData.shift,
         residentialAddress: formData.residentialAddress,
         mobile: formData.mobile,
+        joiningDate: formData.joiningDate,
         pickupPoint: formData.pickupPoint._id || formData.pickupPoint.id,
+        photoBase64,
       };
 
       await registerStaff(payload);
@@ -150,7 +185,7 @@ export default function StaffRegistrationPage() {
         fontFamily: '"Inter", "Roboto", sans-serif',
       }}
     >
-      <Box sx={{ width: "100%", maxWidth: 560 }}>
+      <Box sx={{ width: "100%", maxWidth: 560, position: "relative" }}>
         {/* Header Card */}
         <Box
           sx={{
@@ -208,6 +243,36 @@ export default function StaffRegistrationPage() {
           }}
         >
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+            <h6
+              style={{
+                fontSize: "20px",
+                fontWeight: "600",
+                margin: "0",
+              }}
+            >
+              Already registered?
+            </h6>
+            {/* Top Login Button */}
+            <Box sx={{ display: "flex", justifyContent: "start", mb: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={() => navigate("/staff/payment")}
+                sx={{
+                  borderRadius: "10px",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  borderColor: "#2563EB",
+                  color: "#2563EB",
+                  "&:hover": {
+                    borderColor: "#1D4ED8",
+                    bgcolor: "#EFF6FF",
+                  },
+                }}
+              >
+                Login / Upload Payment
+              </Button>
+            </Box>
+
             {/* Section: Personal Info */}
             <Typography
               sx={{
@@ -268,18 +333,21 @@ export default function StaffRegistrationPage() {
                   placeholder="Select or type your institution"
                   error={!!fieldErrors.schoolOrCollege}
                   helperText={fieldErrors.schoolOrCollege || ""}
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: (
-                      <>
-                        <InputAdornment position="start">
-                          <SchoolOutlined
-                            sx={{ fontSize: 18, color: "#94A3B8" }}
-                          />
-                        </InputAdornment>
-                        {params.InputProps?.startAdornment}
-                      </>
-                    ),
+                  slotProps={{
+                    ...params.slotProps,
+                    input: {
+                      ...params.slotProps?.input,
+                      startAdornment: (
+                        <>
+                          <InputAdornment position="start">
+                            <SchoolOutlined
+                              sx={{ fontSize: 18, color: "#94A3B8" }}
+                            />
+                          </InputAdornment>
+                          {params.slotProps?.input?.startAdornment}
+                        </>
+                      ),
+                    },
                   }}
                   sx={inputSx}
                 />
@@ -329,6 +397,36 @@ export default function StaffRegistrationPage() {
                 startAdornment: (
                   <InputAdornment position="start">
                     <PhoneOutlined sx={{ fontSize: 18, color: "#94A3B8" }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={inputSx}
+            />
+            <InputLabel
+              sx={{
+                fontSize: "0.7rem",
+                fontWeight: 700,
+                color: "#94A3B8",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Joining Date *
+            </InputLabel>
+            <TextField
+              type="date"
+              fullWidth
+              size="small"
+              value={formData.joiningDate}
+              onChange={handleChange("joiningDate")}
+              error={!!fieldErrors.joiningDate}
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CalendarTodayOutlined
+                      sx={{ fontSize: 18, color: "#94A3B8" }}
+                    />
                   </InputAdornment>
                 ),
               }}
@@ -444,26 +542,29 @@ export default function StaffRegistrationPage() {
                   placeholder="Select your boarding stop"
                   error={!!fieldErrors.pickupPoint}
                   helperText={fieldErrors.pickupPoint || ""}
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: (
-                      <>
-                        <InputAdornment position="start">
-                          <LocationOnOutlined
-                            sx={{ fontSize: 18, color: "#94A3B8" }}
-                          />
-                        </InputAdornment>
-                        {params.InputProps?.startAdornment}
-                      </>
-                    ),
-                    endAdornment: (
-                      <React.Fragment>
-                        {loadingPoints ? (
-                          <CircularProgress color="inherit" size={18} />
-                        ) : null}
-                        {params.InputProps?.endAdornment}
-                      </React.Fragment>
-                    ),
+                  slotProps={{
+                    ...params.slotProps,
+                    input: {
+                      ...params.slotProps?.input,
+                      startAdornment: (
+                        <>
+                          <InputAdornment position="start">
+                            <LocationOnOutlined
+                              sx={{ fontSize: 18, color: "#94A3B8" }}
+                            />
+                          </InputAdornment>
+                          {params.slotProps?.input?.startAdornment}
+                        </>
+                      ),
+                      endAdornment: (
+                        <React.Fragment>
+                          {loadingPoints ? (
+                            <CircularProgress color="inherit" size={18} />
+                          ) : null}
+                          {params.slotProps?.input?.endAdornment}
+                        </React.Fragment>
+                      ),
+                    },
                   }}
                   sx={inputSx}
                 />
@@ -553,6 +654,142 @@ export default function StaffRegistrationPage() {
               </Box>
             )}
 
+            {/* Photo Upload Section */}
+            <Typography
+              sx={{
+                fontSize: "0.7rem",
+                fontWeight: 700,
+                color: "#94A3B8",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                mt: 1,
+              }}
+            >
+              Profile Photo
+            </Typography>
+
+            <Box
+              sx={{
+                border: "2px dashed",
+                borderColor: fieldErrors.photo
+                  ? "#EF4444"
+                  : photoPreview
+                    ? "#10B981"
+                    : "#CBD5E1",
+                borderRadius: "16px",
+                bgcolor: photoPreview ? "#F0FDF4" : "#F8FAFC",
+                p: 3,
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 1.5,
+                transition: "all 0.2s",
+                "&:hover": {
+                  borderColor: photoPreview ? "#10B981" : "#94A3B8",
+                  bgcolor: photoPreview ? "#F0FDF4" : "#F1F5F9",
+                },
+              }}
+            >
+              {photoPreview ? (
+                <Box
+                  component="img"
+                  src={photoPreview}
+                  alt="Profile Preview"
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    objectFit: "cover",
+                    borderRadius: "50%",
+                    border: "3px solid #10B981",
+                    boxShadow: "0 4px 12px rgba(16,185,129,0.2)",
+                  }}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: "50%",
+                    bgcolor: "#E2E8F0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <PhotoCameraOutlined
+                    sx={{ color: "#64748B", fontSize: 28 }}
+                  />
+                </Box>
+              )}
+
+              <Box>
+                <Typography
+                  sx={{
+                    fontWeight: 600,
+                    color: "#1E293B",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  {photoPreview ? "Photo Selected" : "Upload Passport Photo"}
+                </Typography>
+                <Typography
+                  sx={{
+                    color: "#64748B",
+                    fontSize: "0.8rem",
+                    mt: 0.5,
+                    mb: 1.5,
+                  }}
+                >
+                  Format: JPG, PNG • Max size: 5MB
+                </Typography>
+              </Box>
+
+              <Button
+                component="label"
+                variant={photoPreview ? "outlined" : "contained"}
+                startIcon={<CloudUploadOutlined />}
+                sx={{
+                  borderRadius: "10px",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  bgcolor: photoPreview ? "transparent" : "#0F172A",
+                  color: photoPreview ? "#0F172A" : "#fff",
+                  borderColor: photoPreview ? "#E2E8F0" : "transparent",
+                  "&:hover": {
+                    bgcolor: photoPreview ? "#F8FAFC" : "#1E293B",
+                  },
+                }}
+              >
+                {photoPreview ? "Change Photo" : "Select Photo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handleFileSelect}
+                />
+              </Button>
+              {fieldErrors.photo && (
+                <Typography
+                  sx={{ color: "#EF4444", fontSize: "0.75rem", mt: 0.5 }}
+                >
+                  {fieldErrors.photo}
+                </Typography>
+              )}
+            </Box>
+
+            {serverError && (
+              <Typography
+                sx={{
+                  color: "#EF4444",
+                  fontSize: "0.875rem",
+                  textAlign: "center",
+                }}
+              >
+                {serverError}
+              </Typography>
+            )}
+
             {/* Submit */}
             <Button
               variant="contained"
@@ -606,24 +843,21 @@ export default function StaffRegistrationPage() {
                 </Typography>
               </Box>
             )}
-
-            <Box sx={{ textAlign: "center" }}>
-              <Typography sx={{ fontSize: "0.85rem", color: "#94A3B8" }}>
-                Already registered?{" "}
-                <span
-                  style={{
-                    color: "#2563EB",
-                    cursor: "pointer",
-                    fontWeight: 600,
-                  }}
-                  onClick={() => navigate("/staff/payment")}
-                >
-                  Upload Payment
-                </span>
-              </Typography>
-            </Box>
           </Box>
         </Box>
+
+        {/* Image Crop Modal */}
+        {cropOpen && (
+          <ImageCropModal
+            open={cropOpen}
+            onClose={() => {
+              setCropOpen(false);
+              setCropSrc(null);
+            }}
+            imageSrc={cropSrc}
+            onComplete={handleCropComplete}
+          />
+        )}
       </Box>
 
       {/* ── Success Dialog ──────────────────────────────────────────────────── */}

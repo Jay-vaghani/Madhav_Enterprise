@@ -27,6 +27,7 @@ import {
   getStudentByReceipt,
   searchStudentByName,
   searchStudentByPickupPoint,
+  searchStudentByDepartment,
 } from "../../../api/checker/api";
 import { getPublicSettings } from "../../../api/public/api";
 import { checkOffenceHistory } from "../../../api/checker/confiscationApi";
@@ -46,7 +47,9 @@ export default function BusCheckerPage() {
   const [receiptNumber, setReceiptNumber] = useState("");
   const [searchName, setSearchName] = useState("");
   const [searchPickupPoint, setSearchPickupPoint] = useState("");
+  const [searchDepartment, setSearchDepartment] = useState("");
   const [pickupOptions, setPickupOptions] = useState([]);
+  const [departmentOptions, setDepartmentOptions] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -56,6 +59,9 @@ export default function BusCheckerPage() {
       .then((res) => {
         if (res?.success && res.pickupPoints) {
           setPickupOptions(res.pickupPoints.map((p) => p.label));
+        }
+        if (res?.success && res.departments) {
+          setDepartmentOptions(res.departments.map((d) => d.label));
         }
       })
       .catch((err) => console.error("Failed to fetch pickup points", err));
@@ -198,8 +204,46 @@ export default function BusCheckerPage() {
         }
       }, 800);
       return () => clearTimeout(delayDebounceFn);
+    } else if (searchType === "department") {
+      const trimmedDept = searchDepartment.trim();
+      if (trimmedDept.length < 2) {
+        setStudents([]);
+        setError("");
+        return;
+      }
+      setLoading(true);
+      setError("");
+
+      const delayDebounceFn = setTimeout(async () => {
+        try {
+          const res = await searchStudentByDepartment(trimmedDept, token);
+          if (res.success && res.data) {
+            const enrichedStudents = await Promise.all(
+              res.data.map(async (student) => {
+                if (student.mobile) {
+                  const histRes = await checkOffenceHistory(student.mobile, token);
+                  if (histRes && histRes.success) {
+                    student.offenceCount = histRes.offenceCount;
+                  }
+                }
+                return student;
+              }),
+            );
+            setStudents(enrichedStudents);
+          } else {
+            setStudents([]);
+            setError("No student found");
+          }
+        } catch (err) {
+          setStudents([]);
+          setError("No student found for that department");
+        } finally {
+          setLoading(false);
+        }
+      }, 800);
+      return () => clearTimeout(delayDebounceFn);
     }
-  }, [receiptNumber, searchName, searchPickupPoint, searchType, token]);
+  }, [receiptNumber, searchName, searchPickupPoint, searchDepartment, searchType, token]);
 
   return (
     <Box
@@ -289,6 +333,7 @@ export default function BusCheckerPage() {
             <Tab value="receipt" label="Receipt No." />
             <Tab value="name" label="Student Name" />
             <Tab value="pickupPoint" label="Pickup Point" />
+            <Tab value="department" label="Department" />
           </Tabs>
         </Paper>
 
@@ -312,25 +357,31 @@ export default function BusCheckerPage() {
               ? "Enter Receipt Number"
               : searchType === "name"
               ? "Enter Student Name"
+              : searchType === "department"
+              ? "Select Department"
               : "Select Pickup Point"}
           </Typography>
           
-          {searchType === "pickupPoint" ? (
+          {searchType === "pickupPoint" || searchType === "department" ? (
             <Autocomplete
               freeSolo
-              options={pickupOptions}
+              options={searchType === "department" ? departmentOptions : pickupOptions}
               getOptionLabel={(option) => (option ? String(option) : "")}
-              value={searchPickupPoint}
+              value={searchType === "department" ? searchDepartment : searchPickupPoint}
               onChange={(event, newValue) => {
-                setSearchPickupPoint(newValue || "");
+                searchType === "department"
+                  ? setSearchDepartment(newValue || "")
+                  : setSearchPickupPoint(newValue || "");
               }}
               onInputChange={(event, newInputValue) => {
-                setSearchPickupPoint(newInputValue);
+                searchType === "department"
+                  ? setSearchDepartment(newInputValue)
+                  : setSearchPickupPoint(newInputValue);
               }}
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  placeholder="e.g. Sahyog"
+                  placeholder={searchType === "department" ? "e.g. B.Tech Computer Science" : "e.g. Sahyog"}
                   variant="outlined"
                   sx={{
                     "& .MuiOutlinedInput-root": {

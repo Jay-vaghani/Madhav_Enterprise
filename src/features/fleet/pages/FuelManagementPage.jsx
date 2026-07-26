@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Box,
   Paper,
@@ -128,6 +128,9 @@ export default function FuelManagementPage() {
     notes: "",
   });
 
+  // Track whether user manually overrode the auto-calculated cost
+  const isCostManuallyEdited = useRef(false);
+
   // ── Summary stats computed client-side ──
   const summaryStats = useMemo(() => {
     if (!entries.length) {
@@ -245,11 +248,39 @@ export default function FuelManagementPage() {
     }
   }, [pricePerLitre]);
 
+  // ── Auto-calculate fuelCost when litresFilled changes ──
+  useEffect(() => {
+    if (isCostManuallyEdited.current) return; // user overrode — don't clobber
+    const litres = parseFloat(formData.litresFilled);
+    const ppl = parseFloat(pricePerLitre);
+    if (litres > 0 && ppl > 0) {
+      setFormData((prev) => ({ ...prev, fuelCost: String(Math.floor(litres * ppl)) }));
+    }
+  }, [formData.litresFilled, pricePerLitre]);
+
+  // ── Auto-fill driver when bus changes in the form ──
+  const autoFillDriverForBus = (busId) => {
+    if (!busId || !drivers.length) return;
+    const busDrivers = drivers.filter(
+      (d) => d.assignedBusId && (d.assignedBusId._id === busId || d.assignedBusId === busId)
+    );
+    if (busDrivers.length === 1) {
+      const d = busDrivers[0];
+      setFormData((prev) => ({
+        ...prev,
+        driverId: d._id,
+        driverName: d.name,
+      }));
+    }
+  };
+
   const handleOpenNew = () => {
     setIsEditing(false);
     setCurrentEntryId(null);
+    isCostManuallyEdited.current = false;
+    const defaultBusId = selectedBusIdFilter || (buses.length > 0 ? buses[0]._id : "");
     setFormData({
-      busId: selectedBusIdFilter || (buses.length > 0 ? buses[0]._id : ""),
+      busId: defaultBusId,
       driverId: null,
       date: new Date().toISOString().slice(0, 10),
       driverName: "",
@@ -260,12 +291,15 @@ export default function FuelManagementPage() {
       fuelCost: "",
       notes: "",
     });
+    // Auto-fill driver for default bus
+    setTimeout(() => autoFillDriverForBus(defaultBusId), 0);
     setOpenDialog(true);
   };
 
   const handleOpenEdit = (entry) => {
     setIsEditing(true);
     setCurrentEntryId(entry._id);
+    isCostManuallyEdited.current = true; // editing: treat cost as manually set
     setFormData({
       busId: entry.busId?._id || entry.busId,
       driverId: entry.driverId?._id || entry.driverId || null,
@@ -536,30 +570,34 @@ export default function FuelManagementPage() {
             <InputLabel sx={{ color: "#1E293B", fontWeight: 600, mb: 0.5 }}>
               Filter by Vehicle
             </InputLabel>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={selectedBusIdFilter}
-              onChange={(e) => setSelectedBusIdFilter(e.target.value)}
-              InputProps={{
-                sx: { borderRadius: "12px", bgcolor: "white" },
-                startAdornment: (
-                  <FilterListRounded
-                    sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }}
-                  />
-                ),
-              }}
-            >
-              <MenuItem value="">
-                <em>Show all active buses</em>
-              </MenuItem>
-              {buses.map((bus) => (
-                <MenuItem key={bus._id} value={bus._id}>
-                  {bus.numberPlate} — {bus.modelName}
-                </MenuItem>
-              ))}
-            </TextField>
+            <Autocomplete
+              options={buses}
+              value={buses.find((b) => b._id === selectedBusIdFilter) || null}
+              onChange={(_, v) => setSelectedBusIdFilter(v ? v._id : "")}
+              getOptionLabel={(b) => `${b.numberPlate} — ${b.modelName}`}
+              isOptionEqualToValue={(a, b) => a._id === b._id}
+              clearOnEscape
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  size="small"
+                  placeholder="All buses"
+                  slotProps={{
+                    ...params.slotProps,
+                    input: {
+                      ...params.slotProps?.input,
+                      startAdornment: (
+                        <>
+                          <FilterListRounded sx={{ color: "#94A3B8", fontSize: 20, mr: 0.5 }} />
+                          {params.slotProps?.input?.startAdornment}
+                        </>
+                      ),
+                      sx: { borderRadius: "12px", bgcolor: "white" },
+                    },
+                  }}
+                />
+              )}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <InputLabel sx={{ color: "#1E293B", fontWeight: 600, mb: 0.5 }}>
@@ -1391,24 +1429,28 @@ export default function FuelManagementPage() {
 
             <Grid container spacing={2.5}>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  select
-                  fullWidth
-                  required
-                  label="Select Bus"
-                  value={formData.busId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, busId: e.target.value })
+                <Autocomplete
+                  options={buses}
+                  getOptionLabel={(option) =>
+                    `${option.numberPlate} (${option.modelName})`
                   }
+                  value={buses.find((b) => b._id === formData.busId) || null}
+                  onChange={(_, newValue) => {
+                    const newBusId = newValue ? newValue._id : "";
+                    setFormData((prev) => ({ ...prev, busId: newBusId, driverId: null, driverName: "" }));
+                    if (newBusId) autoFillDriverForBus(newBusId);
+                  }}
                   disabled={isEditing && !isAdmin}
-                  InputProps={{ sx: { borderRadius: "12px" } }}
-                >
-                  {buses.map((bus) => (
-                    <MenuItem key={bus._id} value={bus._id}>
-                      {bus.numberPlate} ({bus.modelName})
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  isOptionEqualToValue={(option, value) => option._id === value._id}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      required
+                      label="Select Bus"
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
+                    />
+                  )}
+                />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
@@ -1465,14 +1507,20 @@ export default function FuelManagementPage() {
                       required
                       label="Driver"
                       placeholder="Select a driver"
-                      InputProps={{
-                        ...params.InputProps,
-                        sx: { borderRadius: "12px" },
-                        startAdornment: (
-                          <PersonTwoTone
-                            sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }}
-                          />
-                        ),
+                      slotProps={{
+                        ...params.slotProps,
+                        input: {
+                          ...params.slotProps?.input,
+                          sx: { borderRadius: "12px" },
+                          startAdornment: (
+                            <>
+                              <PersonTwoTone
+                                sx={{ mr: 1, color: "#94A3B8", fontSize: 20 }}
+                              />
+                              {params.slotProps?.input?.startAdornment}
+                            </>
+                          ),
+                        },
                       }}
                     />
                   )}
@@ -1575,9 +1623,10 @@ export default function FuelManagementPage() {
                   inputProps={{ step: "0.1" }}
                   placeholder="0.00"
                   value={formData.litresFilled}
-                  onChange={(e) =>
-                    setFormData({ ...formData, litresFilled: e.target.value })
-                  }
+                  onChange={(e) => {
+                    isCostManuallyEdited.current = false; // reset — allow re-auto-calc
+                    setFormData({ ...formData, litresFilled: e.target.value });
+                  }}
                   InputProps={{
                     sx: { borderRadius: "12px" },
                     startAdornment: (
@@ -1595,8 +1644,14 @@ export default function FuelManagementPage() {
                   type="tel"
                   placeholder="0.00"
                   value={formData.fuelCost}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fuelCost: e.target.value })
+                  onChange={(e) => {
+                    isCostManuallyEdited.current = true; // user manually editing
+                    setFormData({ ...formData, fuelCost: e.target.value });
+                  }}
+                  helperText={
+                    !isCostManuallyEdited.current && pricePerLitre && formData.litresFilled
+                      ? `Auto-calculated · You can override`
+                      : ""
                   }
                   InputProps={{
                     sx: { borderRadius: "12px" },

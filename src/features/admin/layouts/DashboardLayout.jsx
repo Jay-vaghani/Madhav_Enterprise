@@ -19,6 +19,8 @@ import {
   LocalGasStationOutlined,
   PersonOutlined,
   WarningAmber,
+  DescriptionOutlined,
+  BuildOutlined,
 } from "@mui/icons-material";
 import { theme } from "../../../theme/theme";
 import AdminSidebar from "../components/AdminSidebar";
@@ -26,7 +28,7 @@ import AdminTopBar from "../components/AdminTopBar";
 import PendingStudentsPage from "../pages/PendingStudentsPage";
 import ReportsPage from "../pages/ReportsPage";
 import ApprovedStudentsPage from "../pages/ApprovedStudentsPage";
-import RejectedStudentsPage from "../pages/RejectedStudentsPage";
+
 import CancellationPage from "../pages/CancellationPage";
 import TemporaryPassesPage from "../pages/TemporaryPassesPage";
 import SettingsPage from "../pages/SettingsPage";
@@ -38,24 +40,27 @@ import StaffManagementPage from "../../staff/pages/StaffManagementPage";
 import StaffPaymentsPage from "../../staff/pages/StaffPaymentsPage";
 import StaffAnalyticsPage from "../../staff/pages/StaffAnalyticsPage";
 import ConfiscationsPage from "../pages/ConfiscationsPage";
+import BusDocumentsPage from "../../fleet/pages/BusDocumentsPage";
+import BusMaintenancePage from "../../fleet/pages/BusMaintenancePage";
 
 const NAV_ITEMS = [
   { id: "pending", label: "Pending", icon: <PendingActionsOutlined /> },
   { id: "approved", label: "Approved", icon: <PeopleAltOutlined /> },
+  { id: "reports", label: "Reports", icon: <BarChartOutlined /> },
   { id: "confiscations", label: "Confiscations", icon: <WarningAmber /> },
-  { id: "rejected", label: "Rejected", icon: <DoNotDisturbAltOutlined /> },
   {
     id: "temporary_passes",
     label: "Passes",
     icon: <ConfirmationNumberOutlined />,
   },
   { id: "cancellation", label: "Refund", icon: <MoneyOffOutlined /> },
-  { id: "buses", label: "Buses", icon: <DirectionsBusOutlined /> },
-  { id: "fuel", label: "Fuel", icon: <LocalGasStationOutlined /> },
-  { id: "drivers", label: "Drivers", icon: <PersonOutlined /> },
+  { id: "buses",          label: "Buses",       icon: <DirectionsBusOutlined /> },
+  { id: "fuel",           label: "Fuel",        icon: <LocalGasStationOutlined /> },
+  { id: "drivers",        label: "Drivers",     icon: <PersonOutlined /> },
+  { id: "bus_documents",  label: "Docs",        icon: <DescriptionOutlined /> },
+  { id: "bus_maintenance",label: "Maintenance", icon: <BuildOutlined /> },
   { id: "staff", label: "Staff", icon: <PeopleAltOutlined /> },
   { id: "staff_analytics", label: "Staff Stats", icon: <BarChartOutlined /> },
-  { id: "reports", label: "Reports", icon: <BarChartOutlined /> },
 ];
 
 export default function DashboardLayout() {
@@ -81,8 +86,7 @@ export default function DashboardLayout() {
         return <ApprovedStudentsPage />;
       case "confiscations":
         return <ConfiscationsPage />;
-      case "rejected":
-        return <RejectedStudentsPage />;
+
       case "reports":
         return <ReportsPage />;
       case "cancellation":
@@ -99,6 +103,10 @@ export default function DashboardLayout() {
         return <FuelManagementPage />;
       case "drivers":
         return <DriverManagementPage />;
+      case "bus_documents":
+        return <BusDocumentsPage />;
+      case "bus_maintenance":
+        return <BusMaintenancePage />;
       case "staff":
         return <StaffManagementPage />;
       case "staff_analytics":
