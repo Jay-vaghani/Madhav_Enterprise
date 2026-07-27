@@ -21,6 +21,7 @@ import {
   Add,
   WarningAmber,
   Search,
+  School,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import {
@@ -641,6 +642,47 @@ export default function BusCheckerPage() {
                                 student.pickupPoint?.name ||
                                 "N/A"
                               : student.pickupPoint || "N/A"}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                      >
+                        <Box
+                          sx={{
+                            bgcolor: isValid ? "#F5F3FF" : "#FEF2F2",
+                            p: 1,
+                            borderRadius: "10px",
+                            display: "flex",
+                          }}
+                        >
+                          <School
+                            sx={{
+                              color: isValid ? "#7C3AED" : "#EF4444",
+                              fontSize: 20,
+                            }}
+                          />
+                        </Box>
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            color="#64748B"
+                            fontWeight="600"
+                            display="block"
+                          >
+                            DEPARTMENT
+                          </Typography>
+                          <Typography
+                            variant="body1"
+                            color="#334155"
+                            fontWeight="600"
+                          >
+                            {typeof student.department === "object"
+                              ? student.department?.label ||
+                                student.department?.name ||
+                                "N/A"
+                              : student.department || "N/A"}
                           </Typography>
                         </Box>
                       </Box>

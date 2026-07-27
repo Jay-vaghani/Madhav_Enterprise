@@ -143,6 +143,8 @@ export default function ApprovedStudentsPage() {
   const [searchName, setSearchName] = useState("");
   const [searchReceipt, setSearchReceipt] = useState("");
   const [searchMobile, setSearchMobile] = useState("");
+  const [searchStudentPhone, setSearchStudentPhone] = useState("");
+  const [searchParentPhone, setSearchParentPhone] = useState("");
   const [appliedFilters, setAppliedFilters] = useState({});
 
   // ── Data state ────────────────────────────────────────────────
@@ -229,6 +231,8 @@ export default function ApprovedStudentsPage() {
       searchName,
       searchReceipt,
       searchMobile,
+      searchStudentPhone,
+      searchParentPhone,
     });
   const handleReset = () => {
     setYear("");
@@ -237,6 +241,8 @@ export default function ApprovedStudentsPage() {
     setSearchName("");
     setSearchReceipt("");
     setSearchMobile("");
+    setSearchStudentPhone("");
+    setSearchParentPhone("");
     setAppliedFilters({});
   };
   const handleLoadMore = () => loadStudents(page + 1, true);
@@ -346,16 +352,30 @@ export default function ApprovedStudentsPage() {
             />
           </Grid>
 
-          {/* Mobile No — student or parent */}
+          {/* Student Phone */}
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <TextField
               size="small"
               fullWidth
               type="tel"
-              label="Mobile No"
-              placeholder="Student or Parent"
-              value={searchMobile}
-              onChange={(e) => setSearchMobile(e.target.value)}
+              label="Student Phone"
+              placeholder="Student Mobile No"
+              value={searchStudentPhone}
+              onChange={(e) => setSearchStudentPhone(e.target.value)}
+              sx={selectSx}
+            />
+          </Grid>
+
+          {/* Parents Phone */}
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <TextField
+              size="small"
+              fullWidth
+              type="tel"
+              label="Parents Phone"
+              placeholder="Parent Mobile No"
+              value={searchParentPhone}
+              onChange={(e) => setSearchParentPhone(e.target.value)}
               sx={selectSx}
             />
           </Grid>

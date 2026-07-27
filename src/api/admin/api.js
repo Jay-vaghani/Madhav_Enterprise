@@ -340,6 +340,8 @@ export const fetchApprovedStudents = async (token, filters = {}) => {
   if (filters.searchName) params.set("searchName", filters.searchName);
   if (filters.searchReceipt) params.set("searchReceipt", filters.searchReceipt);
   if (filters.searchMobile) params.set("searchMobile", filters.searchMobile);
+  if (filters.searchStudentPhone) params.set("searchStudentPhone", filters.searchStudentPhone);
+  if (filters.searchParentPhone) params.set("searchParentPhone", filters.searchParentPhone);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.limit) params.set("limit", String(filters.limit));
 
