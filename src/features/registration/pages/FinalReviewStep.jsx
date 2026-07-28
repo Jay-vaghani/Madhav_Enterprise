@@ -24,8 +24,10 @@ import {
   CenterFocusWeak,
   Gavel,
   Shield,
+  WarningAmberOutlined,
 } from "@mui/icons-material";
 import { useRegistration, YEARS } from "../context/RegistrationContext";
+import { isSpecialCaseStudent } from "../../../utils/specialCase";
 import ImageCropModal from "../../../components/ImageCropModal";
 
 // ── T&C content ────────────────────────────────────────────────
@@ -904,7 +906,24 @@ export default function FinalReviewStep() {
                 {pickup && (
                   <Box sx={{ mb: 1.5 }}>
                     <p style={lbl}>Annual Fee</p>
-                    <p style={val}>₹ {pickup.fee?.toLocaleString("en-IN")}</p>
+                    {isSpecialCaseStudent(formData) ? (
+                      <Chip
+                        icon={<WarningAmberOutlined style={{ color: "#92400E", fontSize: 14 }} />}
+                        label="Visit Transport Office for Fee"
+                        size="small"
+                        sx={{
+                          bgcolor: "#FEF3C7",
+                          color: "#92400E",
+                          fontWeight: 700,
+                          fontSize: "0.72rem",
+                          border: "1px solid #FCD34D",
+                          borderRadius: "8px",
+                          mt: 0.5,
+                        }}
+                      />
+                    ) : (
+                      <p style={val}>₹ {pickup.fee?.toLocaleString("en-IN")}</p>
+                    )}
                   </Box>
                 )}
               </Box>

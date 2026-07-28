@@ -8,13 +8,17 @@ import {
   TextField,
   Typography,
   CircularProgress,
+  Alert,
+  Chip,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
-import { Place, InfoOutlined } from "@mui/icons-material";
+import { Place, InfoOutlined, WarningAmberOutlined, DirectionsBusOutlined, LocationOn } from "@mui/icons-material";
 import { useRegistration } from "../context/RegistrationContext";
+import { isSpecialCaseStudent } from "../../../utils/specialCase";
 
 export default function FinancialInformationStep() {
   const { formData, updateFormData, pickupPoints, settingsLoading, settingsError, retryLoadSettings } = useRegistration();
+  const isSpecialCase = isSpecialCaseStudent(formData);
 
   const { control, watch } = useForm({
     defaultValues: {
@@ -69,6 +73,30 @@ export default function FinancialInformationStep() {
               based on your pickup point.
             </p>
           </Box>
+
+          {/* ── SPECIAL CASE FEE NOTICE ── */}
+          {isSpecialCase && (
+            <Alert
+              severity="warning"
+              icon={<WarningAmberOutlined sx={{ color: "#D97706", fontSize: 24 }} />}
+              sx={{
+                mb: 3,
+                borderRadius: "16px",
+                border: "1.5px solid #FCD34D",
+                bgcolor: "#FFFBEB",
+                boxShadow: "0 4px 16px rgba(245, 158, 11, 0.12)",
+                "& .MuiAlert-message": { color: "#92400E", fontSize: "0.9rem", lineHeight: 1.6 },
+              }}
+            >
+              <strong>Special Case Fee Notice:</strong> You are registering for{" "}
+              <strong>
+                {typeof formData.department === "string"
+                  ? formData.department
+                  : formData.department?.label || "Special Course"}
+              </strong>{" "}
+              (Year {formData.year}). Please <strong>visit the Transportation Office</strong> to know the exact transportation fee you have to pay.
+            </Alert>
+          )}
 
           <Box sx={{ position: "relative" }}>
             {/* Location pin icon overlay — doesn't interfere with Autocomplete internals */}
@@ -165,9 +193,9 @@ export default function FinancialInformationStep() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                bgcolor: "#F0F4FF",
+                bgcolor: isSpecialCase ? "#FFFBEB" : "#F0F4FF",
                 borderRadius: "12px",
-                borderLeft: "4px solid #2563EB",
+                borderLeft: isSpecialCase ? "4px solid #F59E0B" : "4px solid #2563EB",
                 px: 2.5,
                 py: 2,
                 transition: "all 0.3s ease",
@@ -193,25 +221,49 @@ export default function FinancialInformationStep() {
               </Box>
 
               {/* Right: fee badge */}
-              <Box
-                sx={{
-                  bgcolor: "#2563EB",
-                  color: "#fff",
-                  borderRadius: "99px",
-                  px: 2,
-                  py: 0.75,
-                  fontWeight: 700,
-                  fontSize: "0.85rem",
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                  ml: 2,
-                }}
-              >
-                ₹{" "}
-                {selectedPickup.fee.toLocaleString("en-IN", {
-                  minimumFractionDigits: 0,
-                })}
-              </Box>
+              {isSpecialCase ? (
+                <Box
+                  sx={{
+                    bgcolor: "#FEF3C7",
+                    color: "#92400E",
+                    borderRadius: "99px",
+                    px: 2,
+                    py: 0.75,
+                    fontWeight: 700,
+                    fontSize: "0.8rem",
+                    border: "1px solid #FCD34D",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    ml: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                  }}
+                >
+                  <DirectionsBusOutlined sx={{ fontSize: 16, color: "#D97706" }} />
+                  Visit Office for Fee
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    bgcolor: "#2563EB",
+                    color: "#fff",
+                    borderRadius: "99px",
+                    px: 2,
+                    py: 0.75,
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    ml: 2,
+                  }}
+                >
+                  ₹{" "}
+                  {selectedPickup.fee.toLocaleString("en-IN", {
+                    minimumFractionDigits: 0,
+                  })}
+                </Box>
+              )}
             </Box>
           )}
         </Grid>
@@ -223,7 +275,7 @@ export default function FinancialInformationStep() {
             sx={{
               borderRadius: "20px",
               border: "1px solid",
-              borderColor: "grey.100",
+              borderColor: isSpecialCase ? "#FCD34D" : "grey.100",
               boxShadow: "0 10px 40px rgba(37,99,235,0.05)",
               mb: 3,
             }}
@@ -242,37 +294,67 @@ export default function FinancialInformationStep() {
                 <Typography sx={{ color: "#64748B", fontWeight: 500 }}>
                   Base Route Fee
                 </Typography>
-                <Typography sx={{ color: "#0F172A", fontWeight: 700 }}>
-                  ₹ {formattedFee}
+                <Typography sx={{ color: isSpecialCase ? "#D97706" : "#0F172A", fontWeight: 700 }}>
+                  {isSpecialCase ? "Visit Office" : `₹ ${formattedFee}`}
                 </Typography>
               </Box>
 
-              {/* Removing Transport Insurance & Registration Fee as requested */}
-
-              <Box sx={{ mt: 3 }}>
-                <Typography
+              {/* Special Case Fee Notice Box */}
+              {isSpecialCase ? (
+                <Box
                   sx={{
-                    fontSize: "0.75rem",
-                    fontWeight: 700,
-                    color: "#94A3B8",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    mb: 1,
+                    bgcolor: "#FFFBEB",
+                    border: "1.5px solid #FCD34D",
+                    p: 2.5,
+                    borderRadius: "14px",
+                    mt: 2,
                   }}
                 >
-                  AMOUNT TO BE PAID
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: "2.49rem",
-                    fontWeight: 800,
-                    color: "#2563EB",
-                    lineHeight: 1,
-                  }}
-                >
-                  ₹ {formattedFee}
-                </Typography>
-              </Box>
+                  <Typography
+                    sx={{
+                      fontSize: "0.95rem",
+                      fontWeight: 800,
+                      color: "#92400E",
+                      lineHeight: 1.4,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <LocationOn sx={{ color: "#D97706", fontSize: 22 }} />
+                    Visit Transportation Office
+                  </Typography>
+                  <Typography sx={{ fontSize: "0.85rem", color: "#78350F", lineHeight: 1.5, fontWeight: 500 }}>
+                    Please visit the Transportation Office to know how much transportation fee you have to pay and get your pass issued.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ mt: 3 }}>
+                  <Typography
+                    sx={{
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      color: "#94A3B8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      mb: 1,
+                    }}
+                  >
+                    AMOUNT TO BE PAID
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: "2.49rem",
+                      fontWeight: 800,
+                      color: "#2563EB",
+                      lineHeight: 1,
+                    }}
+                  >
+                    ₹ {formattedFee}
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
 
