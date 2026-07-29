@@ -10,6 +10,7 @@ import {
   InputAdornment,
   MenuItem,
   Select,
+  Switch,
   TextField,
   useMediaQuery,
   CircularProgress,
@@ -18,6 +19,7 @@ import {
 import Grid from "@mui/material/Grid";
 import { School } from "@mui/icons-material";
 import { useRegistration, YEARS } from "../context/RegistrationContext";
+import { isSecondYearDegreeStudent } from "../../../utils/specialCase";
 
 // ── Uppercase field label style ───────────────────────────────
 const fieldLabel = {
@@ -39,11 +41,19 @@ export default function IdentityVerificationStep() {
       semester: formData.semester,
       department: formData.department,
       shift: formData.shift,
+      completedKpguDiploma: formData.completedKpguDiploma || false,
     },
   });
 
   const watchedYear = watch("year");
+  const watchedDepartment = watch("department");
+  const watchedCompletedKpguDiploma = watch("completedKpguDiploma");
   const isMobile = useMediaQuery("(max-width: 600px)");
+
+  const isSecondYearDegree = isSecondYearDegreeStudent({
+    year: watchedYear,
+    department: watchedDepartment,
+  });
 
   // ── Auto-set semester when year changes ──────────────────────
   useEffect(() => {
@@ -341,6 +351,68 @@ export default function IdentityVerificationStep() {
                 />
                 )}
               </Grid>
+
+              {/* ── KPGU DIPLOMA PROMPT FOR 2ND YEAR DEGREE STUDENTS ── */}
+              {isSecondYearDegree && (
+                <Grid size={{ xs: 12 }}>
+                  <Box
+                    sx={{
+                      p: 2.5,
+                      bgcolor: "#FFFBEB",
+                      border: "1.5px solid #FCD34D",
+                      borderRadius: "14px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 2,
+                      flexWrap: "wrap",
+                      boxShadow: "0 2px 10px rgba(245, 158, 11, 0.1)",
+                    }}
+                  >
+                    <Box sx={{ flex: 1, minWidth: 240 }}>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "0.95rem",
+                          fontWeight: 700,
+                          color: "#92400E",
+                        }}
+                      >
+                        Completed 3-Year Diploma from KPGU University?
+                      </p>
+                      <p
+                        style={{
+                          margin: "4px 0 0",
+                          fontSize: "0.82rem",
+                          color: "#B45309",
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        If you completed your 3-year Diploma from KPGU University, please enable this option. You will be requested to visit the Transportation Office to confirm your fee structure.
+                      </p>
+                    </Box>
+                    <Switch
+                      checked={!!watchedCompletedKpguDiploma}
+                      onChange={(e) => {
+                        setValue("completedKpguDiploma", e.target.checked, {
+                          shouldDirty: true,
+                        });
+                        updateFormData({
+                          completedKpguDiploma: e.target.checked,
+                        });
+                      }}
+                      sx={{
+                        "& .MuiSwitch-switchBase.Mui-checked": {
+                          color: "#D97706",
+                        },
+                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                          bgcolor: "#F59E0B",
+                        },
+                      }}
+                    />
+                  </Box>
+                </Grid>
+              )}
 
                      {/* ── ACADEMIC SHIFT (3 selectable cards) ─────────── */}
               <Grid size={{ xs: 12 }}>

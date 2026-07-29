@@ -63,6 +63,7 @@ export function RegistrationProvider({ children }) {
     semester: "",
     department: null, // full department object
     shift: "",
+    completedKpguDiploma: false,
 
     // Step 3: Financial Information
     pickupPoint: null, // full pickup point object

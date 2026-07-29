@@ -601,7 +601,11 @@ export default function VerificationModal({
                       ? student.department
                       : student?.department?.label || "Special Branch"}
                   </strong>{" "}
-                  (Year {student?.year}). Please verify their academic eligibility carefully before approving.
+                  (Year {student?.year})
+                  {student?.completedKpguDiploma || student?.isKpguDiploma
+                    ? " — Completed 3-Year Diploma from KPGU University."
+                    : "."}{" "}
+                  Please verify their academic eligibility and fee structure before approving.
                 </Alert>
               )}
 
