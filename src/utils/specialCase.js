@@ -35,7 +35,7 @@ export function isSecondYearDegreeStudent(studentOrFormData) {
  * and transportation fee office visits:
  * 1. 4th Year B.CSE, B.CV, B.IT, B.EE, B.ME, B.CE, B.CHEM, B.Pharm
  * 2. 3rd Year D.CSE, D.CV, D.IT, D.EE, D.ME, D.CE, D.CHEM
- * 3. 2nd Year B.CSE, B.CV, B.IT, B.EE, B.ME, B.CE, B.CHEM who completed 3-year Diploma from KPGU
+ * 3. 2nd Year B.CSE, B.CV, B.IT, B.EE, B.ME, B.CE, B.CHEM
  */
 export function isSpecialCaseStudent(studentOrFormData) {
   if (!studentOrFormData) return false;
@@ -83,14 +83,18 @@ export function isSpecialCaseStudent(studentOrFormData) {
     if (year3Targets.some((t) => deptLabel.includes(t))) return true;
   }
 
-  // 2nd Year degree branches who completed 3-Year Diploma from KPGU
-  if (yearStr === "2" && isSecondYearDegreeStudent(studentOrFormData)) {
-    if (
-      studentOrFormData.completedKpguDiploma ||
-      studentOrFormData.isKpguDiploma
-    ) {
-      return true;
-    }
+  // 2nd Year degree branches: B.CSE, B.CV, B.IT, B.EE, B.ME, B.CE, B.CHEM
+  if (yearStr === "2") {
+    const year2Targets = [
+      "B.CSE",
+      "B.CV",
+      "B.IT",
+      "B.EE",
+      "B.ME",
+      "B.CE",
+      "B.CHEM",
+    ];
+    if (year2Targets.some((t) => deptLabel.includes(t))) return true;
   }
 
   return false;
