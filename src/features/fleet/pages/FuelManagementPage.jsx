@@ -1256,73 +1256,123 @@ export default function FuelManagementPage() {
                     </Box>
                   </Box>
 
-                  {/* Right: Performance Section */}
+                  {/* Right: Notes & Performance Section (Side-by-side) */}
                   <Box
                     sx={{
-                      minWidth: { md: 150 },
-                      textAlign: { xs: "left", md: "right" },
                       display: "flex",
-                      flexDirection: { xs: "row", md: "column" },
-                      alignItems: { xs: "center", md: "flex-end" },
-                      gap: { xs: 2, md: 0 },
+                      alignItems: "center",
+                      gap: 2,
+                      ml: { md: "auto" },
+                      flexWrap: "wrap",
+                      justifyContent: { xs: "flex-start", md: "flex-end" },
                     }}
                   >
-                    {entry.averageKmPerLitre ? (
-                      <>
-                        <Typography
+                    {/* Notes Box — rendered side-by-side with avg km/L */}
+                    {entry.notes && (
+                      <Tooltip title={entry.notes} arrow placement="top">
+                        <Box
                           sx={{
-                            fontWeight: 950,
-                            fontSize: "1.1rem",
-                            color:
-                              STATUS_CONFIG[entry.status]?.text || "#1E293B",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.8,
+                            bgcolor: "#FEF3C7",
+                            color: "#92400E",
+                            border: "1px solid #FCD34D",
+                            borderRadius: "8px",
+                            px: 1.5,
+                            py: 0.5,
+                            maxWidth: { xs: "100%", sm: 240, md: 320 },
+                            cursor: "default",
                           }}
                         >
-                          {entry.averageKmPerLitre.toFixed(2)}
-                          <Box
-                            component="span"
+                          <WarningAmberRounded
+                            sx={{ fontSize: 15, color: "#D97706", flexShrink: 0 }}
+                          />
+                          <Typography
                             sx={{
-                              fontSize: "0.7rem",
+                              fontSize: "0.75rem",
                               fontWeight: 700,
-                              ml: 0.5,
+                              color: "#92400E",
+                              lineHeight: 1.3,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
                             }}
                           >
-                            km/L
-                          </Box>
-                        </Typography>
+                            {entry.notes}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+                    )}
+
+                    {/* Performance Section: average km/L & status */}
+                    <Box
+                      sx={{
+                        minWidth: { md: 100 },
+                        textAlign: { xs: "left", md: "right" },
+                        display: "flex",
+                        flexDirection: { xs: "row", md: "column" },
+                        alignItems: { xs: "center", md: "flex-end" },
+                        gap: { xs: 2, md: 0 },
+                      }}
+                    >
+                      {entry.averageKmPerLitre ? (
+                        <>
+                          <Typography
+                            sx={{
+                              fontWeight: 950,
+                              fontSize: "1.1rem",
+                              color:
+                                STATUS_CONFIG[entry.status]?.text || "#1E293B",
+                            }}
+                          >
+                            {entry.averageKmPerLitre.toFixed(2)}
+                            <Box
+                              component="span"
+                              sx={{
+                                fontSize: "0.7rem",
+                                fontWeight: 700,
+                                ml: 0.5,
+                              }}
+                            >
+                              km/L
+                            </Box>
+                          </Typography>
+                          <Chip
+                            icon={STATUS_CONFIG[entry.status]?.icon}
+                            label={
+                              STATUS_CONFIG[entry.status]?.label || entry.status
+                            }
+                            size="small"
+                            sx={{
+                              mt: { md: 0.2 },
+                              height: 18,
+                              fontSize: "0.6rem",
+                              fontWeight: 900,
+                              bgcolor:
+                                STATUS_CONFIG[entry.status]?.bg || "#F1F5F9",
+                              color:
+                                STATUS_CONFIG[entry.status]?.text || "#64748B",
+                              borderRadius: "4px",
+                              "& .MuiChip-icon": { fontSize: 12 },
+                            }}
+                          />
+                        </>
+                      ) : (
                         <Chip
-                          icon={STATUS_CONFIG[entry.status]?.icon}
-                          label={
-                            STATUS_CONFIG[entry.status]?.label || entry.status
-                          }
+                          label="Initial Entry"
                           size="small"
+                          variant="outlined"
                           sx={{
-                            mt: { md: 0.2 },
-                            height: 18,
+                            height: 20,
                             fontSize: "0.6rem",
-                            fontWeight: 900,
-                            bgcolor:
-                              STATUS_CONFIG[entry.status]?.bg || "#F1F5F9",
-                            color:
-                              STATUS_CONFIG[entry.status]?.text || "#64748B",
-                            borderRadius: "4px",
-                            "& .MuiChip-icon": { fontSize: 12 },
+                            fontWeight: 700,
+                            color: "#94A3B8",
+                            borderColor: "#E2E8F0",
                           }}
                         />
-                      </>
-                    ) : (
-                      <Chip
-                        label="Initial Entry"
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                          height: 20,
-                          fontSize: "0.6rem",
-                          fontWeight: 700,
-                          color: "#94A3B8",
-                          borderColor: "#E2E8F0",
-                        }}
-                      />
-                    )}
+                      )}
+                    </Box>
                   </Box>
 
                   {/* Floating Action Menu for row hover */}

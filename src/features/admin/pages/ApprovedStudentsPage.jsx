@@ -319,6 +319,11 @@ export default function ApprovedStudentsPage() {
 
       {/* Filter Bar */}
       <Box
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            handleApply();
+          }
+        }}
         sx={{
           bgcolor: "#fff",
           borderRadius: "14px",

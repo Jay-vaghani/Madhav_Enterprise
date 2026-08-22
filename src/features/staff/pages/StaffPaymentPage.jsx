@@ -377,6 +377,7 @@ export default function StaffPaymentPage() {
 
               <TextField
                 label="Mobile Number"
+                type="tel"
                 fullWidth
                 value={mobile}
                 onChange={(e) => {
@@ -387,6 +388,14 @@ export default function StaffPaymentPage() {
                 onKeyDown={(e) => e.key === "Enter" && handleLookup()}
                 size="small"
                 placeholder="10-digit mobile number"
+                slotProps={{
+                  htmlInput: {
+                    inputMode: "numeric",
+                    pattern: "[0-9]*",
+                    maxLength: 10,
+                    autoComplete: "tel",
+                  },
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">

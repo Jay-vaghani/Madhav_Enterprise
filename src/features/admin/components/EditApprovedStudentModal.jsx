@@ -706,6 +706,9 @@ export default function EditApprovedStudentModal({
                         fullWidth
                         error={!!errors.fullName}
                         helperText={errors.fullName?.message}
+                        onChange={(e) =>
+                          field.onChange(e.target.value.replace(/[0-9]/g, ""))
+                        }
                         sx={fieldSx}
                       />
                     )}

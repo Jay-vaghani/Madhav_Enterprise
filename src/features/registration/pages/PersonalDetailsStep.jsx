@@ -68,8 +68,12 @@ export default function PersonalDetailsStep() {
 
   const fieldSx = {
     "& .MuiOutlinedInput-root": { height: 52, borderRadius: "10px" },
+    "& input": { textTransform: "capitalize" },
   };
-  const areaSx = { "& .MuiOutlinedInput-root": { borderRadius: "10px" } };
+  const areaSx = {
+    "& .MuiOutlinedInput-root": { borderRadius: "10px" },
+    "& textarea": { textTransform: "capitalize" },
+  };
 
   const handleMobileChange = (e, onChange) => {
     let val = e.target.value.replace(/\D/g, "");
@@ -140,7 +144,10 @@ export default function PersonalDetailsStep() {
               <Controller
                 name="firstName"
                 control={control}
-                rules={{ required: "First name is required" }}
+                rules={{
+                  required: "First name is required",
+                  validate: (v) => !/\d/.test(v || "") || "First name cannot contain numbers",
+                }}
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
@@ -150,6 +157,9 @@ export default function PersonalDetailsStep() {
                     helperText={fieldState.error?.message}
                     fullWidth
                     sx={fieldSx}
+                    onChange={(e) =>
+                      field.onChange(e.target.value.replace(/[0-9]/g, ""))
+                    }
                     slotProps={{
                       htmlInput: {
                         autoComplete: "given-name",
@@ -166,6 +176,9 @@ export default function PersonalDetailsStep() {
               <Controller
                 name="middleName"
                 control={control}
+                rules={{
+                  validate: (v) => !v || !/\d/.test(v) || "Middle name cannot contain numbers",
+                }}
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
@@ -175,6 +188,9 @@ export default function PersonalDetailsStep() {
                     helperText={fieldState.error?.message}
                     fullWidth
                     sx={fieldSx}
+                    onChange={(e) =>
+                      field.onChange(e.target.value.replace(/[0-9]/g, ""))
+                    }
                     slotProps={{
                       htmlInput: {
                         autoComplete: "additional-name",
@@ -191,7 +207,10 @@ export default function PersonalDetailsStep() {
               <Controller
                 name="lastName"
                 control={control}
-                rules={{ required: "Last name is required" }}
+                rules={{
+                  required: "Last name is required",
+                  validate: (v) => !/\d/.test(v || "") || "Last name cannot contain numbers",
+                }}
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
@@ -201,6 +220,9 @@ export default function PersonalDetailsStep() {
                     helperText={fieldState.error?.message}
                     fullWidth
                     sx={fieldSx}
+                    onChange={(e) =>
+                      field.onChange(e.target.value.replace(/[0-9]/g, ""))
+                    }
                     slotProps={{
                       htmlInput: {
                         autoComplete: "family-name",

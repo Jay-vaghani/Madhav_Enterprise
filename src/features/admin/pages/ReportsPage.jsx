@@ -324,13 +324,18 @@ export default function ReportsPage() {
 
   const buildRows = (students) =>
     [...students]
-      .sort((a, b) =>
-        (a.receiptNumber || "").localeCompare(
+      .sort((a, b) => {
+        const tA = a.approvedAt ? new Date(a.approvedAt).getTime() : 0;
+        const tB = b.approvedAt ? new Date(b.approvedAt).getTime() : 0;
+        const timeA = isNaN(tA) ? 0 : tA;
+        const timeB = isNaN(tB) ? 0 : tB;
+        if (timeA !== timeB) return timeA - timeB;
+        return (a.receiptNumber || "").localeCompare(
           b.receiptNumber || "",
           undefined,
           { numeric: true },
-        ),
-      )
+        );
+      })
       .map((s) => {
         const p = s.payment || {};
         const pm = p.paymentMethod;

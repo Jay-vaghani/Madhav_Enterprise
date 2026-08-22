@@ -1963,7 +1963,7 @@ export default function StaffManagementPage() {
               error={!!editFormErrors.name}
               helperText={editFormErrors.name || ""}
               onChange={(e) => {
-                setEditForm((p) => ({ ...p, name: e.target.value }));
+                setEditForm((p) => ({ ...p, name: e.target.value.replace(/[0-9]/g, "") }));
                 setEditFormErrors((p) => ({ ...p, name: "" }));
               }}
             />

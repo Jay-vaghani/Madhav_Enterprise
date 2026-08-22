@@ -969,11 +969,44 @@ export default function DriverManagementPage() {
                                 {stat.name}
                               </Typography>
                               {stat.mobile && (
-                                <Typography
-                                  sx={{ fontSize: "0.7rem", color: "#94A3B8" }}
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                    mt: 0.2,
+                                  }}
                                 >
-                                  {stat.mobile}
-                                </Typography>
+                                  <Typography
+                                    sx={{
+                                      fontSize: "0.72rem",
+                                      color: "#64748B",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {stat.mobile}
+                                  </Typography>
+                                  <Tooltip
+                                    title={`Call ${stat.name} (${stat.mobile})`}
+                                  >
+                                    <IconButton
+                                      component="a"
+                                      href={`tel:${stat.mobile}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      size="small"
+                                      sx={{
+                                        color: "#16A34A",
+                                        bgcolor: "#DCFCE7",
+                                        "&:hover": {
+                                          bgcolor: "#16A34A",
+                                          color: "#fff",
+                                        },
+                                      }}
+                                    >
+                                      <PhoneTwoTone sx={{ fontSize: 12 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
                               )}
                             </Box>
                           </Box>
@@ -1174,28 +1207,44 @@ export default function DriverManagementPage() {
                               />
                             )}
                           </Box>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                              mt: 0.3,
-                            }}
-                          >
-                            <PhoneTwoTone
-                              sx={{ fontSize: 14, color: "#94A3B8" }}
-                            />
-                            <Typography
-                              sx={{
-                                fontSize: "0.8rem",
-                                color: "#64748B",
-                                fontWeight: 600,
-                              }}
-                            >
-                              {driver.mobile}
-                            </Typography>
-                          </Box>
-
+                          {driver.mobile && (
+                            <Tooltip title={`Call ${driver.mobile}`}>
+                              <Button
+                                component="a"
+                                href={`tel:${driver.mobile}`}
+                                onClick={(e) => e.stopPropagation()}
+                                size="small"
+                                startIcon={
+                                  <PhoneTwoTone
+                                    sx={{ fontSize: "14px !important" }}
+                                  />
+                                }
+                                sx={{
+                                  mt: 0.6,
+                                  bgcolor: "#ECFDF5",
+                                  color: "#047857",
+                                  border: "1px solid #A7F3D0",
+                                  borderRadius: "10px",
+                                  px: 1.5,
+                                  fontSize: "0.78rem",
+                                  fontWeight: 700,
+                                  textTransform: "none",
+                                  boxShadow:
+                                    "0 2px 6px rgba(16, 185, 129, 0.08)",
+                                  transition: "all 0.2s ease",
+                                  "&:hover": {
+                                    bgcolor: "#059669",
+                                    color: "#ffffff",
+                                    borderColor: "#059669",
+                                    boxShadow:
+                                      "0 4px 14px rgba(5, 150, 105, 0.25)",
+                                  },
+                                }}
+                              >
+                                Call Driver
+                              </Button>
+                            </Tooltip>
+                          )}
                         </Box>
                       </Box>
                       <Box
@@ -1536,10 +1585,42 @@ export default function DriverManagementPage() {
                       ) : null;
                     })()}
                   </Box>
-                  <Typography sx={{ fontSize: "0.85rem", color: "#64748B" }}>
-                    {detailDriver.mobile} · License:{" "}
-                    {detailDriver.licenseNumber}
-                  </Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      flexWrap: "wrap",
+                      mt: 0.2,
+                    }}
+                  >
+                    <Typography sx={{ fontSize: "0.85rem", color: "#64748B" }}>
+                      {detailDriver.mobile} · License:{" "}
+                      {detailDriver.licenseNumber}
+                    </Typography>
+                    {detailDriver.mobile && (
+                      <Button
+                        component="a"
+                        href={`tel:${detailDriver.mobile}`}
+                        startIcon={<PhoneTwoTone />}
+                        size="small"
+                        variant="contained"
+                        disableElevation
+                        sx={{
+                          bgcolor: "#16A34A",
+                          color: "#fff",
+                          borderRadius: "8px",
+                          fontWeight: 700,
+                          textTransform: "none",
+                          fontSize: "0.75rem",
+                          px: 1.5,
+                          "&:hover": { bgcolor: "#15803D" },
+                        }}
+                      >
+                        Call Driver
+                      </Button>
+                    )}
+                  </Box>
                 </Box>
               </Box>
               <IconButton onClick={() => setDetailOpen(false)}>

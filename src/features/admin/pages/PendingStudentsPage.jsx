@@ -483,6 +483,11 @@ export default function PendingStudentsPage() {
               placeholder="Filter by student name"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setDebouncedSearch(search);
+                }
+              }}
               size="small"
               fullWidth
               slotProps={{

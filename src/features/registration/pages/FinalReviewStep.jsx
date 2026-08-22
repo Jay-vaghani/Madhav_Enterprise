@@ -110,7 +110,11 @@ function EditText({
     setEditing(true);
   };
   const save = () => {
-    updateFormData({ [fieldKey]: draft.trim() });
+    let val = draft.trim();
+    if (["fullName", "firstName", "middleName", "lastName"].includes(fieldKey)) {
+      val = val.replace(/[0-9]/g, "");
+    }
+    updateFormData({ [fieldKey]: val });
     setEditing(false);
   };
   const onKey = (e) => {
@@ -125,7 +129,13 @@ function EditText({
         <p style={lbl}>{label}</p>
         <TextField
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            let val = e.target.value;
+            if (["fullName", "firstName", "middleName", "lastName"].includes(fieldKey)) {
+              val = val.replace(/[0-9]/g, "");
+            }
+            setDraft(val);
+          }}
           onBlur={save}
           onKeyDown={onKey}
           autoFocus
@@ -135,7 +145,12 @@ function EditText({
           size="small"
           type={type}
           inputProps={{ maxLength }}
-          sx={inputSx}
+          sx={{
+            ...inputSx,
+            ...(["fullName", "firstName", "middleName", "lastName", "permanentAddress"].includes(fieldKey)
+              ? { "& input, & textarea": { textTransform: "capitalize" } }
+              : {}),
+          }}
         />
       </Box>
     );

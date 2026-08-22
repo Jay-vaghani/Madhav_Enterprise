@@ -445,6 +445,7 @@ export default function VerificationModal({
     try {
       const payload = {
         ...data,
+        fullName: data.fullName ? data.fullName.toUpperCase().trim() : "",
         feeAmount: Number(data.feeAmount),
         cashAmount:
           data.paymentMode === "both" ? Number(data.cashAmount) : undefined,
@@ -815,6 +816,9 @@ export default function VerificationModal({
                         fullWidth
                         error={!!errors.fullName}
                         helperText={errors.fullName?.message}
+                        onChange={(e) =>
+                          field.onChange(e.target.value.replace(/[0-9]/g, ""))
+                        }
                         sx={fieldSx}
                       />
                     )}

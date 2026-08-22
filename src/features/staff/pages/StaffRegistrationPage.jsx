@@ -109,7 +109,11 @@ export default function StaffRegistrationPage() {
   }, []);
 
   const handleChange = (field) => (e) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+    let val = e.target.value;
+    if (field === "name") {
+      val = val.replace(/[0-9]/g, "");
+    }
+    setFormData((prev) => ({ ...prev, [field]: val }));
     setFieldErrors((prev) => ({ ...prev, [field]: "" }));
     setServerError("");
   };
@@ -117,6 +121,8 @@ export default function StaffRegistrationPage() {
   const validate = () => {
     const errs = {};
     if (!formData.name) errs.name = "Full name is required.";
+    else if (/\d/.test(formData.name))
+      errs.name = "Full name cannot contain numbers.";
     if (!formData.schoolOrCollege)
       errs.schoolOrCollege = "School / College is required.";
     if (!formData.residentialAddress)
@@ -170,6 +176,7 @@ export default function StaffRegistrationPage() {
       "&.Mui-focused fieldset": { borderColor: "#2563EB", borderWidth: "2px" },
     },
     "& .MuiInputLabel-root.Mui-focused": { color: "#2563EB" },
+    "& input, & textarea": { textTransform: "capitalize" },
   };
 
   return (
